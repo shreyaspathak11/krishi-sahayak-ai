@@ -1,0 +1,48 @@
+# Core AI and Logic
+groq
+langchain
+langchain-community
+langchain-core
+langchain-groq
+langchain-huggingface
+langchain-chroma
+langchain-pinecone
+pinecone-client
+chromadb
+pypdf
+
+# Web Server
+fastapi
+uvicorn[standard]
+gunicorn
+pydantic
+websockets
+
+# Voice and Audio Processing
+SpeechRecognition==3.14.3
+gTTS==2.5.4
+pygame==2.6.1
+pydub==0.25.1
+pyaudio==0.2.14
+numpy==2.3.2
+audioop-lts==0.2.2
+standard-aifc==3.13.0
+standard-chunk==3.13.0
+
+# Telephony
+twilio
+
+# Utilities
+python-dotenv
+pyowm
+pytz
+
+requests
+
+# Additional dependencies for embeddings and ML
+sentence-transformers
+transformers
+torch
+
+# For PDF processing and text splitting
+pypdf2
