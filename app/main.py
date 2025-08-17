@@ -23,13 +23,24 @@ app = FastAPI(
 )
 
 # Add CORS middleware with production-ready settings
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=Config.ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+if Config.ALLOWED_ORIGINS == "*":
+    # For wildcard origins, we can't use credentials
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    # For specific origins, we can use credentials
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=Config.ALLOWED_ORIGINS.split(","),
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # Include API routes
 app.include_router(router)
@@ -48,6 +59,12 @@ async def startup_event():
         logger.info(f"Environment: {Config.ENVIRONMENT}")
         logger.info(f"Host: {Config.HOST}:{Config.PORT}")
         
+        # Check if required environment variables are set
+        if not Config.GROQ_API_KEY:
+            logger.error("GROQ_API_KEY not set! AI agent cannot be initialized.")
+            krishi_agent = None
+            return
+        
         # Create and store the agent in global variable (simple!)
         krishi_agent = create_krishi_agent()
         
@@ -55,4 +72,6 @@ async def startup_event():
         logger.info("Ready to serve farmers!")
     except Exception as e:
         logger.error(f"Error during startup: {e}")
-        raise
+        logger.error("AI agent initialization failed, but API will continue to run")
+        krishi_agent = None
+        # Don't raise the exception - let the API start without the agent

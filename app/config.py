@@ -37,7 +37,7 @@ class Config:
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
     
     # CORS Settings
-    ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+    ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*")
     
     # Paths
     VECTOR_STORE_PATH = os.getenv("VECTOR_STORE_PATH", "./vector_store")
