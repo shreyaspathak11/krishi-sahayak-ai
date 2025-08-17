@@ -45,11 +45,12 @@ async def chat(request: ChatRequest):
                 }
             )
         
-        # Get AI response
         ai_response = get_response(
             krishi_agent, 
             request.message,
-            language_code=request.language
+            language_code=request.language,
+            farmer_context=request.farmer_context,
+            chat_history=request.chat_history
         )
         
         return ChatResponse(
@@ -73,11 +74,12 @@ async def generate_chat_stream(request: ChatRequest) -> AsyncGenerator[str, None
     from app.main import krishi_agent
     
     try:
-        # Get AI response
         response = get_response(
             krishi_agent, 
             request.message,
-            language_code=request.language
+            language_code=request.language,
+            farmer_context=request.farmer_context,
+            chat_history=request.chat_history
         )
         
         # Stream the response word by word

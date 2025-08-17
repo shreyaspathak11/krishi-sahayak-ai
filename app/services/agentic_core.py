@@ -6,7 +6,7 @@ from app.services.language_service import language_service
 from langchain_groq import ChatGroq
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_core.prompts import ChatPromptTemplate
-from typing import Dict, Optional
+from typing import Dict, List
 
 from app.config import Config
 
@@ -39,6 +39,10 @@ def create_krishi_agent():
         tools.get_market_prices,
         tools.get_soil_moisture_data,
         tools.get_current_datetime,
+        tools.get_agriculture_news,
+        tools.get_farming_technology_news,
+        tools.get_market_agriculture_news,
+        tools.get_weather_agriculture_news,
     ]
     
     # This is the instruction manual for the AI. It tells it how to behave.
@@ -69,7 +73,7 @@ def create_krishi_agent():
     return agent_executor
 
 
-def get_response(agent_executor, user_query, language_code: str = "en", farmer_context: Dict = None):
+def get_response(agent_executor, user_query, language_code: str = "en", farmer_context: Dict = None, chat_history: List = None):
     """
     Invokes the agent with a user query and returns the response.
     Includes multilingual support and fallback handling.
@@ -79,8 +83,12 @@ def get_response(agent_executor, user_query, language_code: str = "en", farmer_c
         user_query: User's input query
         language_code: ISO 639-1 language code (en, hi, pa, bn, etc.)
         farmer_context: Optional farmer context for personalized responses
+        chat_history: Optional chat history for context continuity
     """
     print(f"\n--- Invoking Agent with Query: '{user_query}' (Language: {language_code}) ---")
+    
+    if farmer_context:
+        print(f"Using farmer context: {farmer_context}")
     
     # Auto-detect language if not specified or if detection is needed
     if language_code == "auto" or not language_service.is_language_supported(language_code):
@@ -96,6 +104,16 @@ def get_response(agent_executor, user_query, language_code: str = "en", farmer_c
     # Combine the base system prompt with language-specific instructions
     enhanced_query = f"{language_prompt}\n\nUser Query: {user_query}"
     
+    # Process chat history if provided
+    processed_chat_history = []
+    if chat_history:
+        for entry in chat_history[-5:]:  # Keep last 5 interactions for context
+            if isinstance(entry, dict) and 'role' in entry and 'content' in entry:
+                if entry['role'] == 'user':
+                    processed_chat_history.append(("human", entry['content']))
+                elif entry['role'] == 'assistant':
+                    processed_chat_history.append(("ai", entry['content']))
+    
     try:
         # The `invoke` method runs the full agentic chain:
         # 1. AI thinks which tool to use.
@@ -104,7 +122,7 @@ def get_response(agent_executor, user_query, language_code: str = "en", farmer_c
         # 4. The AI formulates a final answer in the specified language.
         response = agent_executor.invoke({
             "input": enhanced_query,
-            "chat_history": [] # We'll add memory later
+            "chat_history": processed_chat_history
         })
         
         # Format the response with language-specific formatting
