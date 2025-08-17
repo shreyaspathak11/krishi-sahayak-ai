@@ -31,6 +31,7 @@ def create_krishi_agent():
     # 2. Define the available tools
     # These are the functions the AI can decide to call.
     available_tools = [
+        tools.get_general_weather_forecast,
         tools.get_weather_forecast,
         tools.get_air_pollution_data,
         tools.get_uv_index,
