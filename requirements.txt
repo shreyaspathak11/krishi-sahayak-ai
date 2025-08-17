@@ -46,3 +46,4 @@ torch
 
 # For PDF processing and text splitting
 pypdf2
+python-multipart
