@@ -12,7 +12,7 @@ from typing import AsyncGenerator
 
 from app.services.agentic_core import get_response
 from app.models.api_models import ChatRequest, ChatResponse
-from app.services import LanguageService
+from app.services import language_service
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +62,7 @@ async def chat(request: ChatRequest):
         logger.error(f"Error in chat endpoint: {e}")
         
         return ChatResponse(
-            response=LanguageService.get_template(request.language, "error"),
+            response=language_service.get_template(request.language, "error"),
             session_id=request.session_id,
             timestamp=datetime.now().isoformat()
         )
@@ -108,7 +108,7 @@ async def generate_chat_stream(request: ChatRequest) -> AsyncGenerator[str, None
         
     except Exception as e:
         # Get error message in appropriate language
-        error_message = LanguageService.get_template(request.language, "error")
+        error_message = language_service.get_template(request.language, "error")
 
         error_data = {
             "type": "error",
