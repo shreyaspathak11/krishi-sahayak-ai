@@ -22,7 +22,10 @@ from gtts import gTTS
 import pygame
 from pydub import AudioSegment
 import numpy as np
-import pyaudio
+try:
+    import pyaudio
+except ImportError:
+    pyaudio = None
 import wave
 import threading
 import queue
