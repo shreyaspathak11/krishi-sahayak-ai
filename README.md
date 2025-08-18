@@ -1,5 +1,5 @@
 # Krishi Sahayak AI (कृषि सहायक AI)
-
+[!Image](https://github.com/shreyaspathak11/krishi-sahayak-ai/blob/main/assets/krishi_sahayak.png)
 ## 1. Project Vision & Executive Summary
 Krishi Sahayak AI is a revolutionary voice-first, AI-powered advisory platform engineered to empower the Indian farmer. It directly tackles the critical information gap in Indian agriculture caused by the digital divide and a lack of access to timely, reliable data.
 
