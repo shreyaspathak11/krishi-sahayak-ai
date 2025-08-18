@@ -1,132 +1,100 @@
 """
-Soil-related tools for Krishi Sahayak AI
-Provides soil moisture and irrigation guidance
+Soil and Irrigation Advisory Tool for Krishi Sahayak AI.
+Provides soil moisture-derived insights and irrigation guidance using government data.
 """
-
 import requests
 from langchain_core.tools import tool
-
 from app.config import Config
 
-@tool
-def get_soil_moisture_data(district: str, state: str = "") -> str:
-    """
-    Gets real-time soil moisture data and irrigation guidance using government weather data.
+# --- PRIVATE HELPER FUNCTIONS ---
+
+def _fetch_soil_api_data(district: str, state: str) -> dict:
+    """A private helper to handle the API call and return the first valid record."""
+    params = {
+        "api-key": Config.GOV_IN_API_KEY,
+        "format": "json",
+        "limit": 5, # Fetch a few recent records to find the latest valid one
+        "filters[district.keyword]": district
+    }
+    if state:
+        params["filters[state.keyword]"] = state
     
-    Args:
-        district (str): The district name (e.g., "Delhi", "Bangalore", "Hisar").
-        state (str, optional): The state name for more specific search.
+    response = requests.get(Config.SOIL_API_URL, params=params, timeout=10)
+    response.raise_for_status()
+    data = response.json()
+    
+    return data.get("records", [{}])[0] if data.get("records") else {}
 
-    Returns:
-        str: A string with soil moisture levels and irrigation recommendations.
-    """
+def _get_irrigation_advice(record: dict) -> str:
+    """Derives a simple irrigation recommendation from a data record."""
     try:
-        # Government weather API endpoint for soil moisture data
-        base_url = Config.SOIL_API_URL
+        rainfall = float(record.get("rainfall_mm", 0))
+        humidity = float(record.get("humidity_percent", 50))
 
-        # API parameters
-        params = {
-            "api-key": Config.GOV_IN_API_KEY,
-            "format": "json",
-            "limit": 10,
-            "offset": 0
-        }
-        
-        # Add district filter
-        if district and district.strip():
-            params["filters[district.keyword]"] = district
-        if state and state.strip():
-            params["filters[state.keyword]"] = state
-            
-        # Make API request
-        response = requests.get(base_url, params=params, timeout=10)
-        response.raise_for_status()
-        
-        data = response.json()
-        
-        if not data or "records" not in data or not data["records"]:
-            # Provide fallback irrigation guidance
-            return f"""No specific soil moisture data found for {district}{f', {state}' if state else ''}.
+        if rainfall > 10:
+            return "Significant recent rainfall detected. Irrigation is likely not needed. Check soil manually."
+        elif rainfall > 5:
+            return "Some recent rainfall. Check soil moisture before irrigating."
+        elif humidity < 40:
+            return "Low humidity and little rain. Crops may need increased irrigation."
+        elif humidity > 80:
+            return "High humidity. Reduce irrigation and monitor for fungal diseases."
+        else:
+            return "Conditions are normal. Follow your regular irrigation schedule based on crop needs."
+    except (ValueError, TypeError):
+        return "Data not available for a specific recommendation. Check soil moisture manually."
 
-General Irrigation Guidelines:
-================================
+def _get_fallback_guidance() -> str:
+    """Provides generic, useful irrigation advice when no specific data is available."""
+    return (
+        "No specific soil moisture data could be found for your location.\n\n"
+        "**General Irrigation Best Practices:**\n"
+        "- The best time to water is early morning (before 10 AM).\n"
+        "- Check soil moisture by inserting a finger 2-3 inches deep. If it's dry, it's time to water.\n"
+        "- Consider using mulch around your crops to help the soil retain moisture.\n"
+        "- Always check the local weather forecast before planning your irrigation schedule."
+    )
 
-**Crop Stage-wise Water Requirements:**
-- Germination: Light, frequent watering
-- Vegetative growth: Moderate watering 
-- Flowering/Fruiting: Increased water needs
-- Maturity: Reduced watering
+# --- THE SIMPLIFIED TOOL ---
 
-**Soil Moisture Indicators:**
-- Sandy soil: Water when top 2-3 inches are dry
-- Clay soil: Water when top 1-2 inches are dry
-- Loamy soil: Water when top 2 inches are dry
+@tool
+def get_soil_and_irrigation_advice(district: str, state: str = "") -> str:
+    """
+    Gets the latest available soil moisture and weather data for a given district
+    and provides a specific irrigation recommendation.
 
-**General Recommendations:**
-- Early morning (6-8 AM) is best time for irrigation
-- Avoid watering during hot afternoon hours
-- Use drip irrigation for water efficiency
-- Mulching helps retain soil moisture
-- Check weather forecast before irrigation
+    Args:
+        district (str): The district name (e.g., "Hisar", "Ludhiana").
+        state (str, optional): The state name for a more specific search (e.g., "Haryana").
+    """
+    print(f"--- Calling Soil Tool for District: {district}, State: {state} ---")
+    try:
+        latest_record = _fetch_soil_api_data(district, state)
 
-**Water Conservation Tips:**
-- Monitor soil moisture with simple finger test
-- Use moisture-retaining organic matter
-- Practice crop rotation for soil health
-- Consider rainwater harvesting"""
+        if not latest_record:
+            return _get_fallback_guidance()
+
+        # Extract key data points from the record
+        date = latest_record.get("date", "N/A")
+        rainfall = latest_record.get("rainfall_mm", "N/A")
+        temp_min = latest_record.get("min_temp_c", "N/A")
+        temp_max = latest_record.get("max_temp_c", "N/A")
         
-        records = data["records"]
-        
-        # Format the response
-        moisture_info = f"Soil Moisture Data for {district}:\n"
-        moisture_info += "=" * 50 + "\n"
-        
-        for i, record in enumerate(records[:5], 1):
-            state_name = record.get("state", "N/A")
-            district_name = record.get("district", "N/A")
-            date = record.get("date", "N/A")
-            rainfall = record.get("rainfall_mm", "N/A")
-            temperature_max = record.get("max_temp_c", "N/A")
-            temperature_min = record.get("min_temp_c", "N/A")
-            humidity = record.get("humidity_percent", "N/A")
-            
-            moisture_info += f"\n{i}. Weather Data - {district_name}, {state_name}\n"
-            moisture_info += f"   Date: {date}\n"
-            moisture_info += f"   Rainfall: {rainfall} mm\n"
-            moisture_info += f"   Temperature: {temperature_min}°C - {temperature_max}°C\n"
-            moisture_info += f"   Humidity: {humidity}%\n"
-            
-            # Provide irrigation guidance based on data
-            try:
-                rainfall_val = float(rainfall) if str(rainfall).replace('.', '').isdigit() else 0
-                humidity_val = float(humidity) if str(humidity).replace('.', '').isdigit() else 50
-                
-                if rainfall_val > 10:
-                    irrigation_advice = "Recent good rainfall - irrigation may not be needed"
-                elif rainfall_val > 5:
-                    irrigation_advice = "Moderate rainfall - check soil moisture before irrigation"
-                elif humidity_val < 40:
-                    irrigation_advice = "Low humidity - increased irrigation may be needed"
-                elif humidity_val > 80:
-                    irrigation_advice = "High humidity - monitor for fungal diseases, reduce irrigation"
-                else:
-                    irrigation_advice = "Normal conditions - follow regular irrigation schedule"
-                    
-                moisture_info += f"   Irrigation Advice: {irrigation_advice}\n"
-            except:
-                moisture_info += f"   Irrigation Advice: Check soil moisture manually\n"
-        
-        moisture_info += f"\n**General Irrigation Guidelines:**\n"
-        moisture_info += f"• Best time: Early morning (6-8 AM) or evening (6-8 PM)\n"
-        moisture_info += f"• Avoid midday watering to prevent water loss\n"
-        moisture_info += f"• Use finger test: Insert finger 2-3 inches into soil\n"
-        moisture_info += f"• Dry soil = irrigation needed, moist soil = wait\n"
-        moisture_info += f"• Consider weather forecast before irrigation\n"
-        moisture_info += f"\nData source: Government weather monitoring stations"
-        
-        return moisture_info
-        
+        # Get a specific recommendation based on the data
+        irrigation_advice = _get_irrigation_advice(latest_record)
+
+        # Assemble a clean, readable summary
+        summary = (
+            f"Based on the latest data for {district} (on {date}):\n"
+            f"- Recent Rainfall: {rainfall} mm\n"
+            f"- Temperature Range: {temp_min}°C to {temp_max}°C\n\n"
+            f"**Irrigation Advice:** {irrigation_advice}"
+        )
+        return summary
+
     except requests.exceptions.RequestException as e:
-        return f"Error connecting to government weather data API: {str(e)}"
+        print(f"Error connecting to soil data API: {e}")
+        return "I am having trouble connecting to the government's soil and weather data service right now."
     except Exception as e:
-        return f"An error occurred while fetching soil moisture data: {str(e)}"
+        print(f"An error occurred in the soil tool: {e}")
+        return "An unexpected error occurred while fetching soil data."

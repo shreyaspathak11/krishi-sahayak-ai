@@ -71,6 +71,10 @@ class LanguageService:
         """Check if a language is supported."""
         return language_code.lower() in self.supported_languages
     
+    def get_language_name(self, language_code: str) -> str:
+        """Get the full language name from language code."""
+        return self.supported_languages.get(language_code.lower(), "English")
+    
     def detect_language(self, text: str) -> str:
         """
         Detect language from input text.
@@ -121,36 +125,23 @@ class LanguageService:
     
     def build_system_prompt_with_language(self, language_code: str, farmer_context: Dict = None) -> str:
         """
-        Build a system prompt that instructs the AI to respond in the specified language.
+        Build a simplified system prompt that instructs the AI to respond in the specified language.
         """
         language_name = self.supported_languages.get(language_code, "English")
         
-        base_prompt = f"""You are Krishi Sahayak AI, an expert agricultural assistant for Indian farmers. 
-Always respond in {language_name} language (language code: {language_code}).
+        base_prompt = f"""
+        You are Krishi Sahayak AI, an expert agricultural assistant for Indian farmers. 
+        Always respond in {language_name} language (language code: {language_code}).
 
-Important instructions:
-1. Always use {language_name} for your responses
-2. Use appropriate agricultural terminology in {language_name}
-3. Be culturally sensitive and relevant to Indian farming practices
-4. Provide practical, actionable advice
-5. Use simple, clear language that farmers can easily understand
+        Important instructions:
+        1. Always use {language_name} for your responses
+        2. Use appropriate agricultural terminology in {language_name}
+        3. Be culturally sensitive and relevant to Indian farming practices
+        4. Provide practical, actionable advice
+        5. Use simple, clear language that farmers can easily understand
 
-"""
-        
-        if farmer_context:
-            farmer_profile = farmer_context.get('farmer_profile', {})
-            if farmer_profile:
-                base_prompt += f"""
-Farmer Profile:
-- Location: {farmer_profile.get('location', 'Not specified')}
-- Crops: {', '.join(farmer_profile.get('crops', []))}
-- Farm Size: {farmer_profile.get('farm_size', 'Not specified')}
-- Soil Type: {farmer_profile.get('soil_type', 'Not specified')}
-- Experience: {farmer_profile.get('farming_experience', 'Not specified')}
-
-"""
-        
-        base_prompt += f"Remember: Always respond in {language_name} language only."
+        Remember: Always respond in {language_name} language only.
+        """
         
         return base_prompt
     
@@ -190,6 +181,21 @@ Farmer Profile:
         }
         
         return keywords.get(language_code, keywords["en"])
+
+    def translate_to(self, text: str, language_code: str) -> str:
+        """
+        Translate text to specified language.
+        For now, this is a simple implementation that returns the text as-is.
+        In production, you would integrate with a translation service.
+        """
+        # For English or unsupported languages, return as-is
+        if language_code.lower() in ["en", "english"] or not self.is_language_supported(language_code):
+            return text
+        
+        # For now, return the text with a language indicator
+        # In production, integrate with Google Translate API or similar
+        language_name = self.get_language_name(language_code)
+        return text  # Return original text for now
 
 
 # Global instance

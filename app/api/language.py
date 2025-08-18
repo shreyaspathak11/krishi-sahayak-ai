@@ -5,7 +5,7 @@ Language support API endpoints
 from fastapi import APIRouter, HTTPException
 from typing import Dict
 
-from app.services import language_service
+from app.services.language_service import language_service
 
 router = APIRouter()
 

@@ -1,15 +1,13 @@
-
-# Import the tool functions from the organized tools package
-from app import tools
-from app.services.language_service import language_service
-
 from langchain_groq import ChatGroq
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_core.prompts import ChatPromptTemplate
-from typing import Dict, List
+from typing import Dict, List, Any
 
+# Import your services and tools
+from app import tools
+from app.services.language_service import language_service
+from app.services.context_service import context_service
 from app.config import Config
-
 
 # --- AGENT SETUP ---
 
@@ -19,152 +17,126 @@ def create_krishi_agent():
     """
     print("--- Initializing Krishi Sahayak AI Agent ---")
     
-    # 1. Define the LLM (Language Model)
-    # We use Groq's Llama 3.1 for its advanced reasoning and tool-calling capabilities.
-    # Temperature=0 ensures deterministic, fact-based responses.
     llm = ChatGroq(
-        model=Config.GROQ_LLM_MODEL,  # Llama 3 70B - excellent for reasoning and tool calling
+        model=Config.GROQ_LLM_MODEL,
         temperature=0,
-        api_key=Config.GROQ_API_KEY  # Make sure to set this in your .env file
+        api_key=Config.GROQ_API_KEY,
+        max_retries=2,
+        request_timeout=30
     )
     
-    # 2. Define the available tools
-    # These are the functions the AI can decide to call.
+    # 1. Consolidate and simplify the list of available tools
     available_tools = [
-        tools.get_general_weather_forecast,
         tools.get_weather_forecast,
         tools.get_air_pollution_data,
         tools.get_uv_index,
         tools.get_crop_advisory,
         tools.get_market_prices,
-        tools.get_soil_moisture_data,
+        tools.get_soil_and_irrigation_advice,
+        tools.get_agricultural_news,
         tools.get_current_datetime,
-        tools.get_agriculture_news,
-        tools.get_farming_technology_news,
-        tools.get_market_agriculture_news,
-        tools.get_weather_agriculture_news,
     ]
     
-    # This is the instruction manual for the AI. It tells it how to behave.
-    # Note: We don't have a `chat_history` variable yet, but we design the
-    # prompt to be ready for it when we build the chat interface.
+    # 2. Create a simpler prompt template that works with the agent framework
     prompt = ChatPromptTemplate.from_messages([
-        ("system", Config.AGENT_SYSTEM_PROMPT),
+        ("system", (
+Config.AGENT_SYSTEM_PROMPT
+        )),
         ("placeholder", "{chat_history}"),
         ("human", "{input}"),
         ("placeholder", "{agent_scratchpad}"),
     ])
 
-    # 4. Create the Tool-Calling Agent
-    # This binds the LLM, the tools, and the prompt together.
     agent = create_tool_calling_agent(llm, available_tools, prompt)
     
-    # 5. Create the Agent Executor
-    # This is the runtime environment that actually executes the agent's decisions.
-    # `verbose=True` is extremely helpful for debugging as it prints the AI's "thoughts".
     agent_executor = AgentExecutor(
         agent=agent, 
         tools=available_tools, 
-        verbose=True,
-        handle_parsing_errors=True # Gracefully handle any unexpected outputs
+        verbose=False,  # Turn off verbose to reduce noise
+        max_iterations=3,  # Limit iterations to prevent infinite loops
+        max_execution_time=30,  # Stop after 30 seconds
+        early_stopping_method="generate",  # Stop early if possible
+        handle_parsing_errors="Check your output and make sure it follows the correct format! For simple greetings, just respond naturally without using tools."
     )
     
     print("--- Agent Initialized Successfully ---")
     return agent_executor
 
-
-def get_response(agent_executor, user_query, language_code: str = "en", farmer_context: Dict = None, chat_history: List = None):
+def get_response(
+    agent_executor: AgentExecutor, 
+    user_input: str, 
+    language_code: str = "en",
+    chat_history: List[Dict[str, str]] = None
+) -> str:
     """
-    Invokes the agent with a user query and returns the response.
-    Includes multilingual support and fallback handling.
+    Invokes the agent with the user's query.
+    Context management and farmer context are handled internally by the backend.
     
     Args:
-        agent_executor: The initialized agent executor
-        user_query: User's input query
-        language_code: ISO 639-1 language code (en, hi, pa, bn, etc.)
-        farmer_context: Optional farmer context for personalized responses
-        chat_history: Optional chat history for context continuity
+        agent_executor: The initialized agent executor.
+        user_input: The user's current message.
+        language_code: The language code for the response.
+        chat_history: The conversation history from frontend (optional).
+        
+    Returns:
+        The AI's response as a string.
     """
-    print(f"\n--- Invoking Agent with Query: '{user_query}' (Language: {language_code}) ---")
+    print(f"\n--- Invoking Agent with Query: '{user_input}' ---")
+
+    # Initialize defaults
+    if chat_history is None:
+        chat_history = []
+
+    # 1. Determine the language for the response
+    if not language_code:
+        language_code = language_service.detect_language(user_input)
+    language_name = language_service.get_language_name(language_code)
     
-    if farmer_context:
-        print(f"Using farmer context: {farmer_context}")
-    
-    # Auto-detect language if not specified or if detection is needed
-    if language_code == "auto" or not language_service.is_language_supported(language_code):
-        detected_language = language_service.detect_language(user_query)
-        print(f"Detected language: {detected_language}")
-        language_code = detected_language
-    
-    # Build language-specific system prompt
-    language_prompt = language_service.build_system_prompt_with_language(
-        language_code, farmer_context
-    )
-    
-    # Combine the base system prompt with language-specific instructions
-    enhanced_query = f"{language_prompt}\n\nUser Query: {user_query}"
-    
-    # Process chat history if provided
-    processed_chat_history = []
+    # 2. Process context internally (backend handles this, not frontend)
+    context_summary = ""
     if chat_history:
-        for entry in chat_history[-5:]:  # Keep last 5 interactions for context
-            if isinstance(entry, dict) and 'role' in entry and 'content' in entry:
-                if entry['role'] == 'user':
-                    processed_chat_history.append(("human", entry['content']))
-                elif entry['role'] == 'assistant':
-                    processed_chat_history.append(("ai", entry['content']))
+        # Use context service to get optimized context
+        context_summary = context_service.get_context_for_ai(chat_history)
     
     try:
-        # The `invoke` method runs the full agentic chain:
-        # 1. AI thinks which tool to use.
-        # 2. AgentExecutor runs the chosen tool.
-        # 3. The tool's output is fed back to the AI.
-        # 4. The AI formulates a final answer in the specified language.
+        # 3. Invoke the agent with context if available
+        if context_summary:
+            # Include context in the input for better responses
+            input_with_context = f"Context from previous conversation: {context_summary}\n\nUser question: {user_input}"
+        else:
+            input_with_context = user_input
+            
+        # Add a simple check for greetings to avoid tool usage
+        simple_greetings = ['hi', 'hello', 'hey', 'namaste', 'good morning', 'good evening', 'how are you']
+        if user_input.lower().strip() in simple_greetings:
+            return "Hello! I'm Krishi Sahayak, your agricultural assistant. I can help you with weather forecasts, crop advice, market prices, and farming guidance. What would you like to know today?"
+            
         response = agent_executor.invoke({
-            "input": enhanced_query,
-            "chat_history": processed_chat_history
+            "input": input_with_context
         })
         
-        # Format the response with language-specific formatting
-        formatted_response = language_service.format_response_with_language(
-            response['output'], language_code
-        )
+        # 5. Translate the final answer if necessary
+        final_response = language_service.translate_to(response['output'], language_code)
         
-        return formatted_response
+        return final_response
         
     except Exception as e:
         print(f"Error during agent execution: {e}")
-        # Return language-specific error message
-        error_message = language_service.get_template(language_code, "error")
-        return error_message
+        # Return a language-specific error message
+        return language_service.get_template(language_code, "error")
 
-
-def get_response_streaming(agent_executor, user_query, language_code: str = "en", farmer_context: Dict = None):
-    """
-    Get streaming response from the agent (for future streaming implementation).
-    For now, this is a placeholder that yields the complete response in chunks.
-    """
-    response = get_response(agent_executor, user_query, language_code, farmer_context)
-    
-    # Split response into words for streaming effect
-    words = response.split()
-    for word in words:
-        yield word + " "
-    
-    # Mark completion
-    yield ""
-
-
-# --- Example Usage (for testing the agent directly) ---
+# --- Example Usage ---
 if __name__ == '__main__':
     krishi_agent = create_krishi_agent()
     
-    # Test Case 1: Simple weather query
-    # query1 = "What is the weather forecast for the next few days?"
-    # response1 = get_response(krishi_agent, query1)
-    # print(f"\nFinal Answer:\n{response1}")
+    # Test with a simple query
+    current_query = "Hello, what can you help me with?"
     
-    # Test Case 2: Complex, multi-step agricultural query
-    query2 = "My wheat crop is at the crown root initiation stage. The temperature is expected to drop to 4 degrees Celsius next week. Should I irrigate? What precautions should I take?"
-    response2 = get_response(krishi_agent, query2)
-    print(f"\nFinal Answer:\n{response2}")
+    # Get the response
+    final_answer = get_response(
+        agent_executor=krishi_agent,
+        user_input=current_query,
+        language_code="en"
+    )
+    
+    print(f"\nFinal Answer:\n{final_answer}")

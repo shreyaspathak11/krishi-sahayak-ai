@@ -7,11 +7,10 @@ from typing import List, Dict, Any, Optional
 
 
 class ChatRequest(BaseModel):
-    """Unified chat request model with optional enhanced features."""
-    message: str  # Changed from 'question' to 'message' for consistency
-    farmer_context: Dict[str, Any] = {}
-    chat_history: List[Dict[str, Any]] = []
-    session_id: Optional[str] = None
+    """Simplified chat request model for frontend."""
+    message: str  # The user's message
+    chat_history: List[Dict[str, Any]] = []  # Conversation history from frontend
+    session_id: Optional[str] = None  # To track conversation sessions
     language: Optional[str] = "en"  # ISO 639-1 language code
     stream: Optional[bool] = False  # Whether to return streaming response
 
@@ -21,21 +20,6 @@ class ChatResponse(BaseModel):
     response: str
     timestamp: Optional[str] = None
     session_id: Optional[str] = None
-
-
-class FarmerProfile(BaseModel):
-    """Farmer profile data model."""
-    name: Optional[str] = None
-    location: Optional[str] = None
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
-    farm_size: Optional[str] = None
-    crops: List[str] = []
-    soil_type: Optional[str] = None
-    irrigation_type: Optional[str] = None
-    farming_experience: Optional[str] = None
-    primary_concerns: Optional[str] = None
-    language: Optional[str] = "en"  # ISO 639-1 language code (en, hi, pa, bn, etc.)
 
 
 class SessionInfo(BaseModel):

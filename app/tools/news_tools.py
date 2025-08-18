@@ -1,213 +1,74 @@
 """
-News tools for fetching latest agriculture news
+Consolidated News Tool for Krishi Sahayak 
+Fetches the latest, most relevant agricultural news on a specified topic.
 """
-
 import requests
-from typing import List, Dict, Any
-from langchain.tools import tool
+from langchain_core.tools import tool
 from app.config import Config
 
+# --- PRIVATE HELPER FUNCTION ---
+
+def _fetch_gnews_articles(query: str, max_articles: int) -> list:
+    """A private helper function to handle the actual API call and error handling."""
+    if not Config.GNEWS_API_KEY:
+        raise ValueError("GNews API key is not configured.")
+
+    params = {
+        "q": query,
+        "lang": "en",
+        "country": "in", # Hardcode for India as it's the target audience
+        "max": max_articles,
+        "apikey": Config.GNEWS_API_KEY,
+        "sortby": "publishedAt"
+    }
+    
+    try:
+        response = requests.get(Config.GNEWS_URL, params=params, timeout=10)
+        response.raise_for_status() # Raises an exception for bad status codes (4xx or 5xx)
+        return response.json().get("articles", [])
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching news from GNews API: {e}")
+        return [] 
+
+# --- THE ONLY NEWS TOOL YOU NEED ---
 
 @tool
-def get_agriculture_news(country: str = "in", language: str = "en", max_articles: int = 5) -> List[Dict[str, Any]]:
+def get_agricultural_news(topic: str) -> str:
     """
-    Fetch latest agriculture news from reliable sources.
-    
+    Fetches the latest news about a specific agricultural topic. Use this tool
+    to find information on market trends, new technologies, weather impacts,
+    or general farming news.
+
     Args:
-        country: Country code (default: "in" for India)
-        language: Language code (default: "en" for English)
-        max_articles: Maximum number of articles to return (default: 5)
-    
-    Returns:
-        List of news articles with title, description, source, url, and publish date
+        topic (str): The specific category of news to fetch. Must be one of
+                     ["general", "technology", "market", "weather"].
     """
-    try:
-        url = Config.GNEWS_URL
-        
-        params = {
-            "q": "agriculture OR farming OR crops OR agricultural technology OR farming techniques OR crop yield OR agricultural policy OR farm subsidies",
-            "lang": language,
-            "country": country,
-            "max": max_articles,
-            "apikey": Config.GNEWS_API_KEY,
-            "sortby": "publishedAt"  # Sort by latest first
-        }
-        
-        response = requests.get(url, params=params, timeout=10)
-        response.raise_for_status()
-        
-        data = response.json()
-        articles = data.get("articles", [])
-        
-        # Format articles for better readability
-        formatted_articles = []
-        for article in articles:
-            formatted_article = {
-                "title": article.get("title", "No title"),
-                "description": article.get("description", "No description"),
-                "source": article.get("source", {}).get("name", "Unknown source"),
-                "url": article.get("url", ""),
-                "published_at": article.get("publishedAt", "Unknown date"),
-                "image": article.get("image", "")
-            }
-            formatted_articles.append(formatted_article)
-        
-        return formatted_articles
-        
-    except requests.exceptions.RequestException as e:
-        return [{"error": f"Failed to fetch news: Network error - {str(e)}"}]
-    except Exception as e:
-        return [{"error": f"Failed to fetch agriculture news: {str(e)}"}]
+    print(f"--- Calling News Tool for Topic: '{topic}' ---")
 
+    # A dictionary to map simple topics to complex search queries.
+    # This keeps the logic clean and easy to extend.
+    topic_keywords = {
+        "general": "agriculture OR farming OR crops OR \"farm subsidies\"",
+        "technology": "\"agricultural technology\" OR \"smart farming\" OR \"precision agriculture\" OR \"drone farming\"",
+        "market": "\"agricultural market\" OR \"crop prices\" OR \"commodity prices\" OR \"mandi prices\"",
+        "weather": "\"weather agriculture\" OR \"drought crops\" OR \"monsoon farming\" OR \"climate change agriculture\""
+    }
 
-@tool
-def get_farming_technology_news(country: str = "in", language: str = "en", max_articles: int = 3) -> List[Dict[str, Any]]:
-    """
-    Fetch latest farming technology and innovation news.
-    
-    Args:
-        country: Country code (default: "in" for India)
-        language: Language code (default: "en" for English)
-        max_articles: Maximum number of articles to return (default: 3)
-    
-    Returns:
-        List of news articles about farming technology and innovations
-    """
-    try:
-        url = Config.GNEWS_URL
+    # Validate the input topic
+    if topic not in topic_keywords:
+        return f"Invalid topic '{topic}'. Please use one of the following: {list(topic_keywords.keys())}"
 
-        params = {
-            "q": "agricultural technology OR smart farming OR precision agriculture OR drone farming OR AI agriculture OR agricultural innovation OR farm automation",
-            "lang": language,
-            "country": country,
-            "max": max_articles,
-            "apikey": Config.GNEWS_API_KEY,
-            "sortby": "publishedAt"
-        }
-        
-        response = requests.get(url, params=params, timeout=10)
-        response.raise_for_status()
-        
-        data = response.json()
-        articles = data.get("articles", [])
-        
-        formatted_articles = []
-        for article in articles:
-            formatted_article = {
-                "title": article.get("title", "No title"),
-                "description": article.get("description", "No description"),
-                "source": article.get("source", {}).get("name", "Unknown source"),
-                "url": article.get("url", ""),
-                "published_at": article.get("publishedAt", "Unknown date"),
-                "category": "Technology"
-            }
-            formatted_articles.append(formatted_article)
-        
-        return formatted_articles
-        
-    except requests.exceptions.RequestException as e:
-        return [{"error": f"Failed to fetch technology news: Network error - {str(e)}"}]
-    except Exception as e:
-        return [{"error": f"Failed to fetch farming technology news: {str(e)}"}]
+    query = topic_keywords[topic]
+    articles = _fetch_gnews_articles(query, max_articles=4)
 
+    if not articles:
+        return f"I could not find any recent news on the topic of '{topic}'."
 
-@tool
-def get_market_agriculture_news(country: str = "in", language: str = "en", max_articles: int = 3) -> List[Dict[str, Any]]:
-    """
-    Fetch latest agriculture market and commodity news.
-    
-    Args:
-        country: Country code (default: "in" for India)
-        language: Language code (default: "en" for English)
-        max_articles: Maximum number of articles to return (default: 3)
-    
-    Returns:
-        List of news articles about agriculture markets and commodity prices
-    """
-    try:
-        url = Config.GNEWS_URL
-
-        params = {
-            "q": "agricultural market OR crop prices OR commodity prices OR agricultural exports OR farm income OR agricultural trade OR mandi prices",
-            "lang": language,
-            "country": country,
-            "max": max_articles,
-            "apikey": Config.GNEWS_API_KEY,
-            "sortby": "publishedAt"
-        }
+    # Format the articles into a clean, human-readable string for the AI
+    summary = f"Here are the top news headlines regarding '{topic}':\n"
+    for article in articles:
+        title = article.get("title", "No Title")
+        source = article.get("source", {}).get("name", "Unknown Source")
+        summary += f"- {title} (Source: {source})\n"
         
-        response = requests.get(url, params=params, timeout=10)
-        response.raise_for_status()
-        
-        data = response.json()
-        articles = data.get("articles", [])
-        
-        formatted_articles = []
-        for article in articles:
-            formatted_article = {
-                "title": article.get("title", "No title"),
-                "description": article.get("description", "No description"),
-                "source": article.get("source", {}).get("name", "Unknown source"),
-                "url": article.get("url", ""),
-                "published_at": article.get("publishedAt", "Unknown date"),
-                "category": "Market"
-            }
-            formatted_articles.append(formatted_article)
-        
-        return formatted_articles
-        
-    except requests.exceptions.RequestException as e:
-        return [{"error": f"Failed to fetch market news: Network error - {str(e)}"}]
-    except Exception as e:
-        return [{"error": f"Failed to fetch agriculture market news: {str(e)}"}]
-
-
-@tool
-def get_weather_agriculture_news(country: str = "in", language: str = "en", max_articles: int = 3) -> List[Dict[str, Any]]:
-    """
-    Fetch latest weather-related agriculture news and alerts.
-    
-    Args:
-        country: Country code (default: "in" for India)
-        language: Language code (default: "en" for English)
-        max_articles: Maximum number of articles to return (default: 3)
-    
-    Returns:
-        List of news articles about weather impacts on agriculture
-    """
-    try:
-        url = Config.GNEWS_URL
-
-        params = {
-            "q": "weather agriculture OR climate farming OR drought crops OR rainfall farming OR agricultural weather OR climate change agriculture OR monsoon farming",
-            "lang": language,
-            "country": country,
-            "max": max_articles,
-            "apikey": Config.GNEWS_API_KEY,
-            "sortby": "publishedAt"
-        }
-        
-        response = requests.get(url, params=params, timeout=10)
-        response.raise_for_status()
-        
-        data = response.json()
-        articles = data.get("articles", [])
-        
-        formatted_articles = []
-        for article in articles:
-            formatted_article = {
-                "title": article.get("title", "No title"),
-                "description": article.get("description", "No description"),
-                "source": article.get("source", {}).get("name", "Unknown source"),
-                "url": article.get("url", ""),
-                "published_at": article.get("publishedAt", "Unknown date"),
-                "category": "Weather"
-            }
-            formatted_articles.append(formatted_article)
-        
-        return formatted_articles
-        
-    except requests.exceptions.RequestException as e:
-        return [{"error": f"Failed to fetch weather news: Network error - {str(e)}"}]
-    except Exception as e:
-        return [{"error": f"Failed to fetch weather agriculture news: {str(e)}"}]
+    return summary.strip()

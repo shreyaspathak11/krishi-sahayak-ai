@@ -1,221 +1,152 @@
 """
-Weather-related tools for Krishi Sahayak AI
-Provides weather forecast, air pollution, and UV index data
+Consolidated Weather and Environmental Tools for Krishi Sahayak AI.
+Provides weather forecast, air pollution, and UV index data using location names.
 """
 
 from datetime import datetime
 from langchain_core.tools import tool
 from pyowm import OWM
-
+from pyowm.commons.exceptions import NotFoundError
 from app.config import Config
 
-# Initialize OWM only if API key is available
-owm = OWM(Config.OPEN_WEATHER_API_KEY)
-mgr = owm.weather_manager()
-air_mgr = owm.airpollution_manager()
-uv_mgr = owm.uvindex_manager()
+# --- INITIALIZATION ---
+try:
+    owm = OWM(Config.OPEN_WEATHER_API_KEY)
+    mgr = owm.weather_manager()
+except Exception as e:
+    print(f"CRITICAL: Failed to initialize OpenWeatherMap client. Check API key. Error: {e}")
+    mgr = None
 
+# --- PRIMARY TOOLS ---
 
 @tool
-def get_general_weather_forecast(location: str = "Delhi, India") -> str:
-    """Gets a general weather forecast for a location without requiring coordinates.
-    Use this when the user asks about weather but doesn't provide specific coordinates.
-    
-    Args:
-        location: City name or general location (e.g., "Delhi", "Mumbai", "Punjab")
+def get_weather_forecast(location: str) -> str:
     """
-    if not mgr: 
-        return "Weather service is not available. Please check your OpenWeatherMap API key."
+    Gets a detailed 5-day weather forecast for a specified location name.
+    This is the primary tool for all weather-related queries.
+
+    Args:
+        location (str): The city or district name, e.g., "Hisar", "Ludhiana", "Pune".
+    """
+    if not mgr:
+        return "Weather service is currently unavailable. Please try again later."
     
-    print(f"--- Calling General Weather Tool for Location: {location} ---")
+    print(f"--- Calling Weather Tool for Location: {location} ---")
     try:
-        # Get forecast by location name
-        forecast = mgr.forecast_at_place(location, '3h')
-        
-        summary = f"5-Day Weather Forecast for {location}:\n"
-        summary += "=" * 50 + "\n"
-        
-        # Group forecasts by date
+        forecast = mgr.forecast_at_place(location, '3h').forecast
         daily_forecasts = {}
-        for weather in forecast.forecast.weathers:
-            date_str = datetime.fromtimestamp(weather.reference_time()).strftime('%Y-%m-%d')
-            if date_str not in daily_forecasts:
-                daily_forecasts[date_str] = []
-            daily_forecasts[date_str].append(weather)
+
+        for weather in forecast.weathers:
+            try:
+                date_str = datetime.fromtimestamp(weather.reference_time()).strftime('%Y-%m-%d')
+                if date_str not in daily_forecasts:
+                    daily_forecasts[date_str] = {'temps': [], 'conditions': [], 'rain_chance': False}
+                
+                # Safely get temperature
+                temp_data = weather.temperature('celsius')
+                if isinstance(temp_data, dict) and 'temp' in temp_data:
+                    daily_forecasts[date_str]['temps'].append(temp_data['temp'])
+                
+                # Safely get weather status
+                if hasattr(weather, 'detailed_status') and weather.detailed_status:
+                    daily_forecasts[date_str]['conditions'].append(weather.detailed_status)
+                    
+                    # Check for rain in the weather status
+                    status = weather.detailed_status.lower()
+                    if 'rain' in status or 'drizzle' in status or 'shower' in status:
+                        daily_forecasts[date_str]['rain_chance'] = True
+                        
+            except Exception as e:
+                print(f"Error processing weather data point: {e}")
+                continue  # Skip this weather point and continue
+
+        # Check if we have any valid data
+        if not daily_forecasts:
+            return f"I'm sorry, I couldn't get weather data for {location}. Please try with a different city name."
+
+        summary = f"Here is the 5-day weather forecast for {location}:\n"
+        for date, data in list(daily_forecasts.items())[:5]:
+            if not data['temps'] or not data['conditions']:
+                continue
+            min_temp, max_temp = min(data['temps']), max(data['temps'])
+            most_common_condition = max(set(data['conditions']), key=data['conditions'].count)
+            day_str = f"- {date}: Min Temp: {min_temp:.1f}°C, Max Temp: {max_temp:.1f}°C. General condition: {most_common_condition}."
+            if data['rain_chance']:
+                day_str += " There is a chance of rain."
+            summary += day_str + "\n"
         
-        # Get daily summaries (first 5 days)
-        for i, (date_str, weathers) in enumerate(list(daily_forecasts.items())[:5], 1):
-            # Get min/max temperatures for the day
-            temps = [w.temperature('celsius')['temp'] for w in weathers]
-            min_temp = min(temps)
-            max_temp = max(temps)
-            
-            # Get most common weather condition
-            conditions = [w.detailed_status for w in weathers]
-            most_common_condition = max(set(conditions), key=conditions.count)
-            
-            # Check for rain
-            rain_forecasts = [w for w in weathers if 'rain' in w.detailed_status.lower()]
-            rain_probability = len(rain_forecasts) / len(weathers) * 100
-            
-            summary += f"\nDay {i} ({date_str}):\n"
-            summary += f"  Min Temp: {min_temp:.1f}°C\n"
-            summary += f"  Max Temp: {max_temp:.1f}°C\n"
-            summary += f"  Condition: {most_common_condition}\n"
-            if rain_probability > 30:
-                summary += f"  Rain Probability: {rain_probability:.0f}%\n"
+        return summary.strip()
         
-        summary += f"\nNote: Best farming times are early morning (5-10 AM) and late afternoon (4-7 PM)"
-        return summary
-        
+    except NotFoundError:
+        return f"I'm sorry, I could not find a location named '{location}'. Please provide a more specific city or district name."
     except Exception as e:
         return f"An error occurred while fetching the weather forecast for {location}: {e}"
 
-
 @tool
-def get_weather_forecast(latitude: float, longitude: float) -> str:
-    """Gets a detailed 5-day weather forecast for agricultural planning.
-    
-    Args:
-        latitude: Latitude coordinate as a number (e.g., 28.6139 for Delhi)
-        longitude: Longitude coordinate as a number (e.g., 77.2090 for Delhi)
+def get_air_pollution_data(location: str) -> str:
     """
-    if not mgr: 
-        return "Weather service is not available. Please check your OpenWeatherMap API key."
-    
-    # Convert string coordinates to float if needed
-    try:
-        lat = float(latitude)
-        lon = float(longitude)
-    except (ValueError, TypeError):
-        # Default to Delhi, India if coordinates are invalid
-        lat = 28.6139
-        lon = 77.2090
-        print(f"--- Using default coordinates (Delhi): Lat: {lat}, Lon: {lon} ---")
-    
-    print(f"--- Calling Weather Tool for Lat: {lat}, Lon: {lon} ---")
-    try:
-        # Use 5-day forecast (free tier) with 3-hour intervals
-        forecast = mgr.forecast_at_coords(lat, lon, '3h')
-        
-        summary = "5-Day Weather Forecast:\n"
-        summary += "=" * 40 + "\n"
-        
-        # Group forecasts by date
-        daily_forecasts = {}
-        for weather in forecast.forecast.weathers:
-            date_str = datetime.fromtimestamp(weather.reference_time()).strftime('%Y-%m-%d')
-            if date_str not in daily_forecasts:
-                daily_forecasts[date_str] = []
-            daily_forecasts[date_str].append(weather)
-        
-        # Get daily summaries (first 5 days)
-        for i, (date_str, weathers) in enumerate(list(daily_forecasts.items())[:5], 1):
-            # Get min/max temperatures for the day
-            temps = [w.temperature('celsius')['temp'] for w in weathers]
-            min_temp = min(temps)
-            max_temp = max(temps)
-            
-            # Get most common weather condition
-            conditions = [w.detailed_status for w in weathers]
-            most_common_condition = max(set(conditions), key=conditions.count)
-            
-            summary += f"\nDay {i} ({date_str}):\n"
-            summary += f"  Min Temp: {min_temp:.1f}°C\n"
-            summary += f"  Max Temp: {max_temp:.1f}°C\n"
-            summary += f"  Condition: {most_common_condition}\n"
-        
-        summary += f"\nNote: Best farming times are early morning (5-10 AM) and late afternoon (4-7 PM)"
-        return summary
-        
-    except Exception as e:
-        return f"An error occurred while fetching the weather forecast: {e}"
+    Gets current air pollution data for a location to assess crop and worker health.
 
-@tool
-def get_air_pollution_data(latitude: float, longitude: float) -> str:
-    """Gets current air pollution data for crop health assessment.
-    
     Args:
-        latitude: Latitude coordinate as a number (e.g., 28.6139 for Delhi)
-        longitude: Longitude coordinate as a number (e.g., 77.2090 for Delhi)
+        location (str): The city or district name, e.g., "Hisar", "Ludhiana", "Pune".
     """
-    if not air_mgr: 
-        return "Air pollution service is not available. Please check your OpenWeatherMap API key."
+    if not mgr:
+        return "Environmental services are currently unavailable."
     
-    # Convert string coordinates to float if needed
+    print(f"--- Calling Air Pollution Tool for Location: {location} ---")
     try:
-        lat = float(latitude)
-        lon = float(longitude)
-    except (ValueError, TypeError):
-        # Default to Delhi, India if coordinates are invalid
-        lat = 28.6139
-        lon = 77.2090
-        print(f"--- Using default coordinates (Delhi): Lat: {lat}, Lon: {lon} ---")
-    
-    print(f"--- Calling Air Pollution Tool for Lat: {lat}, Lon: {lon} ---")
-    try:
-        air_status = air_mgr.air_quality_at_coords(lat=lat, lon=lon)
+        # First, find the coordinates for the given location
+        observation = mgr.weather_at_place(location)
+        lat, lon = observation.location.lat, observation.location.lon
+        
+        # Now, get the air pollution data for those coordinates
+        air_status = mgr.air_pollution_at(lat=lat, lon=lon)
         aqi = air_status.aqi
+
+        if aqi == 1: advice = "Excellent air quality (AQI 1). Safe for all farming activities."
+        elif aqi == 2: advice = "Good air quality (AQI 2). Normal farming activities can continue."
+        elif aqi == 3: advice = "Moderate air quality (AQI 3). Sensitive crops may show minor stress."
+        elif aqi == 4: advice = "Poor air quality (AQI 4). Consider protective measures for workers."
+        else: advice = "Very poor air quality (AQI 5). Avoid heavy outdoor work if possible."
         
-        # Provide agricultural context for AQI
-        if aqi == 1:
-            advice = "Excellent air quality. Safe for all outdoor farming activities."
-        elif aqi == 2:
-            advice = "Good air quality. Normal farming activities can continue."
-        elif aqi == 3:
-            advice = "Moderate air quality. Sensitive crops may be affected."
-        elif aqi == 4:
-            advice = "Poor air quality. Consider protective measures for crops and workers."
-        else:  # aqi == 5
-            advice = "Very poor air quality. Avoid heavy outdoor work, protect sensitive crops."
+        return f"The current Air Quality Index (AQI) in {location} is {aqi}. {advice}"
         
-        summary = f"Current Air Quality: AQI is {aqi} (1=Good, 5=Very Poor).\n{advice}"
-        return summary
-        
+    except NotFoundError:
+        return f"I'm sorry, I could not find a location named '{location}' to check the air quality."
     except Exception as e:
-        return f"An error occurred while fetching air pollution data: {e}"
+        return f"An error occurred while fetching air pollution data for {location}: {e}"
 
 @tool
-def get_uv_index(latitude: float, longitude: float) -> str:
-    """Gets the current UV Index for worker safety and crop protection.
-    
-    Args:
-        latitude: Latitude coordinate as a number (e.g., 28.6139 for Delhi)
-        longitude: Longitude coordinate as a number (e.g., 77.2090 for Delhi)
+def get_uv_index(location: str) -> str:
     """
-    if not uv_mgr: 
-        return "UV Index service is not available. Please check your OpenWeatherMap API key."
-    
-    # Convert string coordinates to float if needed
+    Gets the current UV Index for a location to assess worker safety and crop stress.
+
+    Args:
+        location (str): The city or district name, e.g., "Hisar", "Ludhiana", "Pune".
+    """
+    if not mgr:
+        return "Environmental services are currently unavailable."
+        
+    print(f"--- Calling UV Index Tool for Location: {location} ---")
     try:
-        lat = float(latitude)
-        lon = float(longitude)
-    except (ValueError, TypeError):
-        # Default to Delhi, India if coordinates are invalid
-        lat = 28.6139
-        lon = 77.2090
-        print(f"--- Using default coordinates (Delhi): Lat: {lat}, Lon: {lon} ---")
-    
-    print(f"--- Calling UV Index Tool for Lat: {lat}, Lon: {lon} ---")
-    try:
-        uv_index = uv_mgr.uvindex_around_coords(lat=lat, lon=lon)
-        risk = uv_index.get_exposure_risk()
+        # First, find the coordinates for the given location
+        observation = mgr.weather_at_place(location)
+        lat, lon = observation.location.lat, observation.location.lon
+        
+        # Now, get the UV index for those coordinates
+        uv_index = mgr.uvindex_around_coords(lat=lat, lon=lon)
         uv_value = uv_index.value
+        risk = uv_index.get_exposure_risk()
+
+        advice = ""
+        if uv_value <= 2: advice = "Low risk. Good for transplanting delicate seedlings."
+        elif uv_value <= 5: advice = "Moderate risk. Sun protection is recommended for workers."
+        elif uv_value <= 7: advice = "High risk. Limit midday exposure for workers and sensitive crops."
+        else: advice = "Very high to extreme risk. Minimize outdoor work between 10 AM and 4 PM."
         
-        # Provide agricultural context for UV levels
-        if uv_value <= 2:
-            advice = "Low UV. Safe for extended outdoor work. Good for transplanting delicate seedlings."
-        elif uv_value <= 5:
-            advice = "Moderate UV. Use sun protection for workers. Normal farming activities."
-        elif uv_value <= 7:
-            advice = "High UV. Limit midday exposure. Consider shade for sensitive crops."
-        elif uv_value <= 10:
-            advice = "Very high UV. Avoid 10 AM - 4 PM work. Protect workers and sensitive plants."
-        else:
-            advice = "Extreme UV. Minimize outdoor exposure. Use protective coverings for crops."
+        return f"The current UV Index in {location} is {uv_value:.1f} ({risk}). {advice}"
         
-        summary = f"Current UV Index: {uv_value} (Exposure Risk: {risk})\n{advice}"
-        return summary
-        
+    except NotFoundError:
+        return f"I'm sorry, I could not find a location named '{location}' to check the UV index."
     except Exception as e:
-        return f"An error occurred while fetching UV Index data: {e}"
+        return f"An error occurred while fetching UV Index data for {location}: {e}"

@@ -10,21 +10,25 @@ import asyncio
 import logging
 from typing import AsyncGenerator
 
-from app.services.agentic_core import get_response
 from app.models.api_models import ChatRequest, ChatResponse
-from app.services import language_service
+from app.services.language_service import language_service
+from app.services.agentic_core import get_response
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+def get_krishi_agent():
+    """Get the krishi agent from main module, avoiding circular imports."""
+    import app.main
+    return app.main.krishi_agent
 
 @router.post("/chat")
 async def chat(request: ChatRequest):
     """
     Simple chat endpoint with optional streaming support.
     """
-    from app.main import krishi_agent
+    krishi_agent = get_krishi_agent()
     
     if krishi_agent is None:
         raise HTTPException(status_code=500, detail="AI agent not initialized")
@@ -49,7 +53,6 @@ async def chat(request: ChatRequest):
             krishi_agent, 
             request.message,
             language_code=request.language,
-            farmer_context=request.farmer_context,
             chat_history=request.chat_history
         )
         
@@ -71,14 +74,13 @@ async def chat(request: ChatRequest):
 
 async def generate_chat_stream(request: ChatRequest) -> AsyncGenerator[str, None]:
     """Generate streaming response for chat."""
-    from app.main import krishi_agent
+    krishi_agent = get_krishi_agent()
     
     try:
         response = get_response(
             krishi_agent, 
             request.message,
             language_code=request.language,
-            farmer_context=request.farmer_context,
             chat_history=request.chat_history
         )
         
@@ -95,7 +97,7 @@ async def generate_chat_stream(request: ChatRequest) -> AsyncGenerator[str, None
                 "language": request.language
             }
             yield f"data: {json.dumps(chunk_data)}\n\n"
-            await asyncio.sleep(0.05)  # Small delay for streaming effect
+            await asyncio.sleep(0.05)
         
         # Send completion chunk
         completion_data = {
