@@ -2,17 +2,17 @@
 Core API endpoints for Krishi Sahayak AI
 """
 
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import StreamingResponse
-from datetime import datetime
-import json
 import asyncio
+import json
 import logging
+from datetime import datetime
 from typing import AsyncGenerator
 
-from app.models.api_models import ChatRequest, ChatResponse
-from app.services.language_service import language_service
-from app.services.agentic_core import get_response
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
+
+from app.models import ChatRequest, ChatResponse
+from app.services import language_service, get_response
 
 logger = logging.getLogger(__name__)
 

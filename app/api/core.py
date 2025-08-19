@@ -2,10 +2,10 @@
 Basic API endpoints (health check, root, etc.)
 """
 
-from fastapi import APIRouter, Response
 from datetime import datetime
+from fastapi import APIRouter, Response
 
-from app.models.api_models import HealthResponse
+from app.models import HealthResponse
 
 router = APIRouter()
 

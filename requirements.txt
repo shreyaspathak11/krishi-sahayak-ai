@@ -1,57 +1,43 @@
-# Core AI and Logic
+# Core AI and Logic - Minimal set
 groq
 langchain
 langchain-community
 langchain-core
 langchain-groq
-langchain-huggingface
 langchain-chroma
-langchain-pinecone
-pinecone-client
 chromadb
-pypdf
 
-# Web Server
+# Web Server - Essential only
 fastapi
 uvicorn[standard]
-gunicorn
 pydantic
-websockets
 
-# Data Processing
+# Data Processing - Essential only
 requests
 python-dotenv
 
 # Weather API
 pyowm
 
-# Voice and Audio Processing (optional - commenting out for Docker compatibility)
-# SpeechRecognition==3.14.3
-# gTTS==2.5.4
-# pygame==2.6.1
-# pydub==0.25.1
-# pyaudio==0.2.14
-# audioop-lts==0.2.2
-# standard-aifc==3.13.0
-# standard-chunk==3.13.0
-openai>=1.0.0
-
-
-# Telephony
-twilio
-
 # Utilities
-python-dotenv
-pyowm
 pytz
 
-requests
+# For PDF processing
+pypdf
 
-# Additional dependencies for embeddings and ML
+# Embeddings - Lightweight alternative
 sentence-transformers
-transformers
-torch
 
-# For PDF processing and text splitting
-pypdf2
-python-multipart
+# Optional: For Pinecone (comment out if not using)
+# langchain-pinecone
+# pinecone-client
+
+# Optional: For advanced ML features (comment out if not needed)
+# transformers
+# torch
+
+# Optional: For telephony (comment out if not using)
+# twilio
+
+# Optional: For OpenAI integration (comment out if not using)
+# openai>=1.0.0

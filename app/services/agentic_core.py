@@ -1,13 +1,13 @@
+from typing import Dict, List, Any
+
 from langchain_groq import ChatGroq
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_core.prompts import ChatPromptTemplate
-from typing import Dict, List, Any
 
-# Import your services and tools
-from app import tools
+from app.config import Config
 from app.services.language_service import language_service
 from app.services.context_service import context_service
-from app.config import Config
+import app.tools as tools
 
 # --- AGENT SETUP ---
 

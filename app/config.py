@@ -3,34 +3,32 @@ from dotenv import load_dotenv
 
 
 class Config:
+    """Configuration class for Krishi Sahayak AI"""
+    
+    # Load environment variables
     load_dotenv()
 
     # API Keys
     OPEN_WEATHER_API_KEY = os.getenv("OPENWEATHERMAP_API_KEY")
-
     KCC_API_URL = os.getenv("KCC_API_URL")
     MARKET_PRICE_API_URL = os.getenv("MARKET_PRICE_API_URL")
     SOIL_API_URL = os.getenv("SOIL_API_URL")
     GOV_IN_API_KEY = os.getenv("GOV_IN_API_KEY")
-
     GNEWS_URL = "https://gnews.io/api/v4/search"
     GNEWS_API_KEY = os.getenv("GNEWS_API_KEY")
-
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
+    # Vector Store Configuration
     LOCAL_VECTOR_STORE = os.getenv("LOCAL_VECTOR_STORE", "chroma")
     REMOTE_VECTOR_STORE = os.getenv("REMOTE_VECTOR_STORE", "pinecone")
-
-    PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
-    
-    # Vector Store Configuration
     USE_REMOTE_VECTOR_STORE = os.getenv("USE_REMOTE_VECTOR_STORE", "false").lower() == "true"
+    PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
     PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "krishi-sahayak-ai")
     PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT", "us-east-1")
     PINECONE_DIMENSIONS = int(os.getenv("PINECONE_DIMENSIONS", "1024"))
     
     # Model Configuration
-    GROQ_LLM_MODEL = "llama-3.1-8b-instant"  # Faster model with higher rate limits
+    GROQ_LLM_MODEL = os.getenv("GROQ_LLM_MODEL", "llama-3.1-8b-instant")
     
     # Production Settings
     ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
@@ -38,16 +36,35 @@ class Config:
     PORT = int(os.getenv("PORT", 8000))
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
     
-    # CORS Settings
+    # CORS Settings - More flexible for deployment
     ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*")
     
-    # Paths
+    # Paths - More flexible for different deployment environments
     VECTOR_STORE_PATH = os.getenv("VECTOR_STORE_PATH", "./vector_store")
     DATA_PATH = os.getenv("DATA_PATH", "./data")
     
     @classmethod
     def is_production(cls):
+        """Check if running in production environment"""
         return cls.ENVIRONMENT.lower() == "production"
+    
+    @classmethod
+    def validate_required_env_vars(cls):
+        """Validate that required environment variables are set"""
+        required_vars = [
+            ("GROQ_API_KEY", cls.GROQ_API_KEY),
+            ("OPENWEATHERMAP_API_KEY", cls.OPEN_WEATHER_API_KEY)
+        ]
+        
+        missing_vars = []
+        for var_name, var_value in required_vars:
+            if not var_value:
+                missing_vars.append(var_name)
+        
+        if missing_vars:
+            raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
+        
+        return True
     
 
     AGENT_SYSTEM_PROMPT = """
