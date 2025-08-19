@@ -6,17 +6,27 @@ Supports both local ChromaDB and remote Pinecone vector stores
 
 import os
 
-from langchain_huggingface import HuggingFaceEmbeddings
+# Try langchain_huggingface first, fallback to langchain_community
+try:
+    from langchain_huggingface import HuggingFaceEmbeddings
+except ImportError:
+    from langchain_community.embeddings import HuggingFaceEmbeddings
+
 from langchain_core.tools import tool
 from langchain_chroma import Chroma
-from langchain_pinecone import PineconeVectorStore
-from pinecone import Pinecone
-
 from app.config import Config
+
+# Optional Pinecone imports (only if using remote vector store)
+try:
+    from langchain_pinecone import PineconeVectorStore
+    from pinecone import Pinecone
+    PINECONE_AVAILABLE = True
+except ImportError:
+    PINECONE_AVAILABLE = False
 
 def get_vector_store():
     """Get vector store instance based on configuration"""
-    if Config.USE_REMOTE_VECTOR_STORE and Config.PINECONE_API_KEY:
+    if Config.USE_REMOTE_VECTOR_STORE and Config.PINECONE_API_KEY and PINECONE_AVAILABLE:
         # Use Pinecone for remote vector store
         try:
             pc = Pinecone(api_key=Config.PINECONE_API_KEY)
@@ -33,6 +43,7 @@ def get_vector_store():
             return vectorstore
             
         except Exception as e:
+            print(f"Warning: Pinecone setup failed, falling back to ChromaDB: {e}")
             # Fallback to local ChromaDB
             fallback_embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-mpnet-base-v2")
             vectorstore = Chroma(

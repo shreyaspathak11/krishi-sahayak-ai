@@ -7,6 +7,10 @@ langchain-groq
 langchain-chroma
 chromadb
 
+# HuggingFace for embeddings (both options for compatibility)
+langchain-huggingface
+sentence-transformers
+
 # Web Server - Essential only
 fastapi
 uvicorn[standard]
@@ -24,9 +28,6 @@ pytz
 
 # For PDF processing
 pypdf
-
-# Embeddings - Lightweight alternative
-sentence-transformers
 
 # Optional: For Pinecone (comment out if not using)
 # langchain-pinecone
