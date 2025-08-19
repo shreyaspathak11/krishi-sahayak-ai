@@ -24,8 +24,6 @@ The user experience is designed for maximum simplicity:
 ## 4. System Architecture & Technology
 We have chosen a modern, scalable tech stack optimized for performance and reliability.
 
-![Krishi Sahayak AI Architecture](./assets/architechture_diagram.png)
-
 - **Backend Framework**: FastAPI (Python) for building a high-performance, asynchronous API.
 - **AI Orchestration**: LangChain provides the framework for our agentic architecture, connecting the LLM with our custom tools.
 - **Core Language Model**: Google Gemini Pro is used for its advanced reasoning, multilingual capabilities, and tool-calling functions.
