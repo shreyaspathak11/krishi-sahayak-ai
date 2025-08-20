@@ -4,11 +4,16 @@ from dotenv import load_dotenv
 
 from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_pinecone import PineconeVectorStore
-from pinecone import Pinecone
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 
+# Optional Pinecone imports
+try:
+    from langchain_pinecone import PineconeVectorStore
+    from pinecone import Pinecone
+    PINECONE_AVAILABLE = True
+except ImportError:
+    PINECONE_AVAILABLE = False
 
 # Import config to check which vector store to use
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
@@ -28,10 +33,10 @@ def get_embeddings():
     else:
         return HuggingFaceEmbeddings(model_name="sentence-transformers/all-mpnet-base-v2")
 
-def get_vector_store(embeddings, texts) -> PineconeVectorStore | Chroma:
+def get_vector_store(embeddings, texts):
     """Create vector store based on configuration"""
     
-    if Config.USE_REMOTE_VECTOR_STORE:
+    if Config.USE_REMOTE_VECTOR_STORE and PINECONE_AVAILABLE and Config.PINECONE_API_KEY:
         
         pc = Pinecone(api_key=Config.PINECONE_API_KEY)
         

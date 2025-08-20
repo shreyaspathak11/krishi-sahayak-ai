@@ -7,9 +7,9 @@ langchain-groq
 langchain-chroma
 chromadb
 
-# HuggingFace for embeddings (both options for compatibility)
-langchain-huggingface
+# HuggingFace for embeddings (using langchain-community)
 sentence-transformers
+huggingface-hub
 
 # Web Server - Essential only
 fastapi

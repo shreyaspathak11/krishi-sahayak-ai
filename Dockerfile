@@ -12,6 +12,8 @@ WORKDIR /app
 # Install system dependencies (minimal set)
 RUN apt-get update && apt-get install -y \
     gcc \
+    g++ \
+    curl \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
@@ -36,9 +38,9 @@ USER app
 # Expose the port the app runs on
 EXPOSE $PORT
 
-# Health check
+# Health check that works without curl
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:$PORT/health || exit 1
+    CMD python -c "import requests; import sys; response = requests.get('http://localhost:${PORT}/health', timeout=5); sys.exit(0 if response.status_code == 200 else 1)" || exit 1
 
 # Command to run your application
 CMD uvicorn app.main:app --host 0.0.0.0 --port $PORT

@@ -11,10 +11,16 @@ import sys
 from datetime import datetime
 
 from langchain.schema import Document
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
-from langchain_pinecone import PineconeVectorStore
-from pinecone import Pinecone
+
+# Optional Pinecone imports
+try:
+    from langchain_pinecone import PineconeVectorStore
+    from pinecone import Pinecone
+    PINECONE_AVAILABLE = True
+except ImportError:
+    PINECONE_AVAILABLE = False
 
 # Import config to check which vector store to use
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
@@ -84,7 +90,7 @@ def add_batch_to_vector_store(records, batch_num, embeddings=None):
         embeddings = get_embeddings()
     
     try:
-        if Config.USE_REMOTE_VECTOR_STORE and Config.PINECONE_API_KEY:
+        if Config.USE_REMOTE_VECTOR_STORE and Config.PINECONE_API_KEY and PINECONE_AVAILABLE:
             # Use Pinecone
             print("Adding documents to Pinecone vector store...")
             pc = Pinecone(api_key=Config.PINECONE_API_KEY)
@@ -110,7 +116,7 @@ def add_batch_to_vector_store(records, batch_num, embeddings=None):
             vectorstore.add_documents(documents)
             print(f"Successfully added batch {batch_num} to Pinecone")
         else:
-            # Use local ChromaDB
+            # Use local ChromaDB (fallback)
             print("Adding documents to local ChromaDB...")
             if os.path.exists(VECTOR_STORE_DIR):
                 vectorstore = Chroma(persist_directory=VECTOR_STORE_DIR, embedding_function=embeddings)

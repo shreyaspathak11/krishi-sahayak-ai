@@ -6,12 +6,8 @@ Supports both local ChromaDB and remote Pinecone vector stores
 
 import os
 
-# Try langchain_huggingface first, fallback to langchain_community
-try:
-    from langchain_huggingface import HuggingFaceEmbeddings
-except ImportError:
-    from langchain_community.embeddings import HuggingFaceEmbeddings
-
+# Use langchain_community.embeddings for better compatibility
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_core.tools import tool
 from langchain_chroma import Chroma
 from app.config import Config
