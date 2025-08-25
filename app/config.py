@@ -26,7 +26,10 @@ class Config:
     PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "krishi-sahayak-ai")
     PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT", "us-east-1")
     PINECONE_DIMENSIONS = int(os.getenv("PINECONE_DIMENSIONS", "1024"))
-    
+
+    PINECONE_EMBEDDINGS_MODEL = "BAAI/bge-large-en-v1.5"
+    CHROMA_EMBEDDINGS_MODEL = "sentence-transformers/all-mpnet-base-v2"
+
     # Model Configuration
     GROQ_LLM_MODEL = os.getenv("GROQ_LLM_MODEL", "llama-3.1-8b-instant")
     
