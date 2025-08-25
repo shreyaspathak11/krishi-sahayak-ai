@@ -2,7 +2,7 @@ from typing import List
 from langchain.schema import Document as LangChainDocument
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-from app.knowledge_base.logger_service import error, success
+from app.utils import error, success
 
 from ..interface.base_text_splitter import BaseTextSplitter, TextChunk
 from ..interface.base_document_loader import Document

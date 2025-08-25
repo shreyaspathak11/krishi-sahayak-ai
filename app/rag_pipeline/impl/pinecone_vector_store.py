@@ -6,7 +6,7 @@ from pinecone import Pinecone
 from ..interface.base_vector_store import BaseVectorStore
 from ..interface.base_text_splitter import TextChunk
 from ..interface.base_embeddings import BaseEmbeddings
-from ..logger_service import success, error, warning, info, progress
+from ...utils.logs import success, error, warning, info, progress
 
 
 class PineconeVectorStore(BaseVectorStore):

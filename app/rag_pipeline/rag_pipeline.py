@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import List
 import os
 
-from app.knowledge_base.logger_service import error, info, success
+from app.utils.logs import error, info, success
 
 from .interface import (
     BaseDocumentLoader,

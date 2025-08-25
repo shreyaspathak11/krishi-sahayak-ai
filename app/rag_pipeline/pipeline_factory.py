@@ -1,4 +1,4 @@
-from app.knowledge_base.logger_service import success
+from app.utils.logs import success
 
 
 from ..config import Config
