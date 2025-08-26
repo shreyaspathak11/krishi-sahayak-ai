@@ -1,6 +1,4 @@
-from app.utils.logs import success
-
-
+from app.utils.logs import logger
 from ..config import Config
 from .interface import BaseDocumentLoader, BaseTextSplitter, BaseEmbeddings, BaseVectorStore
 from .impl import (
@@ -75,5 +73,5 @@ class RAGPipelineFactory:
             vector_store=vector_store
         )
 
-        success("RAG pipeline created successfully!")
+        logger.success("RAG pipeline created successfully!")
         return pipeline
