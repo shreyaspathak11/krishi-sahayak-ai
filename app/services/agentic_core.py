@@ -1,4 +1,5 @@
 from typing import Dict, List, Any
+import json
 
 from langchain_groq import ChatGroq
 from langchain.agents import AgentExecutor, create_tool_calling_agent
@@ -37,11 +38,9 @@ def create_krishi_agent():
         tools.get_current_datetime,
     ]
     
-    # 2. Create a simpler prompt template that works with the agent framework
+    # 2. Use JSON prompting system prompt
     prompt = ChatPromptTemplate.from_messages([
-        ("system", (
-Config.AGENT_SYSTEM_PROMPT
-        )),
+        ("system", Config.AGENT_SYSTEM_PROMPT),
         ("placeholder", "{chat_history}"),
         ("human", "{input}"),
         ("placeholder", "{agent_scratchpad}"),
@@ -70,7 +69,6 @@ def get_response(
 ) -> str:
     """
     Invokes the agent with the user's query.
-    Context management and farmer context are handled internally by the backend.
     
     Args:
         agent_executor: The initialized agent executor.
@@ -90,40 +88,43 @@ def get_response(
     # 1. Determine the language for the response
     if not language_code:
         language_code = language_service.detect_language(user_input)
-    language_name = language_service.get_language_name(language_code)
     
-    # 2. Process context internally (backend handles this, not frontend)
+    # 2. Process context internally
     context_summary = ""
     if chat_history:
-        # Use context service to get optimized context
         context_summary = context_service.get_context_for_ai(chat_history)
     
     try:
         # 3. Invoke the agent with context if available
         if context_summary:
-            # Include context in the input for better responses
             input_with_context = f"Context from previous conversation: {context_summary}\n\nUser question: {user_input}"
         else:
             input_with_context = user_input
             
-        # Add a simple check for greetings to avoid tool usage
-        simple_greetings = ['hi', 'hello', 'hey', 'namaste', 'good morning', 'good evening', 'how are you']
-        if user_input.lower().strip() in simple_greetings:
-            return "Hello! I'm Krishi Sahayak, your agricultural assistant. I can help you with weather forecasts, crop advice, market prices, and farming guidance. What would you like to know today?"
-            
+        
+        # 4. Get response from agent
         response = agent_executor.invoke({
             "input": input_with_context
         })
         
-        # 5. Translate the final answer if necessary
-        final_response = language_service.translate_to(response['output'], language_code)
+        raw_response = response.get('output', '')
         
+        # 5. Extract content from JSON response, handle malformed JSON gracefully
+        try:
+            json_data = json.loads(raw_response.strip())
+            content = json_data.get('content', raw_response)
+        except json.JSONDecodeError:
+            content = raw_response
+        
+        # Translate if necessary
+        final_response = language_service.translate_to(content, language_code)
         return final_response
         
     except Exception as e:
         print(f"Error during agent execution: {e}")
         # Return a language-specific error message
-        return language_service.get_template(language_code, "error")
+        error_content = "I apologize, but I'm experiencing technical difficulties. Please try again later."
+        return language_service.translate_to(error_content, language_code)
 
 # --- Example Usage ---
 if __name__ == '__main__':
