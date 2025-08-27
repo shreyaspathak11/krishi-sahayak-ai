@@ -2,7 +2,7 @@ from typing import List
 from langchain.schema import Document as LangChainDocument
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-from app.utils import error, success
+from app.utils.logs import logger
 
 from ..interface.base_text_splitter import BaseTextSplitter, TextChunk
 from ..interface.base_document_loader import Document
@@ -46,9 +46,9 @@ class RecursiveTextSplitter(BaseTextSplitter):
                 )
                 chunks.append(chunk)
 
-            success(f"Split {len(documents)} documents into {len(chunks)} chunks")
+            logger.success(f"Split {len(documents)} documents into {len(chunks)} chunks")
             return chunks
 
         except Exception as e:
-            error(f"Error splitting documents: {str(e)}")
+            logger.error(f"Error splitting documents: {str(e)}")
             raise Exception(f"Error splitting documents: {str(e)}")

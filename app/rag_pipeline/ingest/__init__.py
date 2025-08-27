@@ -1,2 +1,2 @@
-from ingest_kcc import *
-from ingest_pdfs import *
+from .ingest_kcc import *
+from .ingest_pdfs import *

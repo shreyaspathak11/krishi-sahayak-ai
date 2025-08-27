@@ -94,11 +94,46 @@ We are thrilled to have you join us! Follow these steps to get the project runni
 
 ### Running the Application
 
+#### Option 1: Direct Python (Development)
 1. **Start the AI Server:**
    ```bash
    uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
    ```
+   
+   Or use the startup script:
+   ```bash
+   python start.py
+   ```
 
+#### Option 2: Docker (Production Ready)
+1. **Build and run with Docker Compose:**
+   ```bash
+   # Production
+   docker-compose up
+   
+   # Development with hot reload
+   docker-compose --profile dev up krishi-sahayak-ai-dev
+   ```
+
+2. **Or build and run manually:**
+   ```bash
+   # Build the image
+   docker build -t krishi-sahayak-ai .
+   
+   # Run the container
+   docker run -p 8000:8000 --env-file .env krishi-sahayak-ai
+   ```
+
+3. **Quick build script:**
+   ```bash
+   # Linux/Mac
+   ./docker-build.sh
+   
+   # Windows
+   docker-build.bat
+   ```
+
+#### Setting up External Access
 2. **Expose Your Server with ngrok:**
    - Open a new terminal
    - Start ngrok to create a public URL for your server:
