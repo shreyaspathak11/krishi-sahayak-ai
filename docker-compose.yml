@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  krishi-sahayak-ai:
+    build: .
+    container_name: krishi-sahayak-ai
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - HOST=0.0.0.0
+      - PORT=8000
+    env_file:
+      - .env
+    volumes:
+      # Mount vector store and data for persistence
+      - ./vector_store:/app/vector_store
+      - ./data:/app/data
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; response = requests.get('http://localhost:8000/health', timeout=5); exit(0 if response.status_code == 200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Optional: Add a development service with hot reload
+  krishi-sahayak-ai-dev:
+    build: .
+    container_name: krishi-sahayak-ai-dev
+    ports:
+      - "8001:8000"
+    environment:
+      - ENVIRONMENT=development
+      - HOST=0.0.0.0
+      - PORT=8000
+    env_file:
+      - .env
+    volumes:
+      # Mount source code for hot reload in development
+      - .:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    profiles:
+      - dev

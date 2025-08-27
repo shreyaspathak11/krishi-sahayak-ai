@@ -40,7 +40,7 @@ EXPOSE $PORT
 
 # Health check that works without curl
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD python -c "import requests; import sys; response = requests.get('http://localhost:${PORT}/health', timeout=5); sys.exit(0 if response.status_code == 200 else 1)" || exit 1
+    CMD python -c "import requests; import os; response = requests.get(f'http://localhost:{os.getenv(\"PORT\", 8000)}/health', timeout=5); exit(0 if response.status_code == 200 else 1)" || exit 1
 
-# Command to run your application
-CMD uvicorn app.main:app --host 0.0.0.0 --port $PORT
+# Command to run your application using the same start.py approach
+CMD python start.py
