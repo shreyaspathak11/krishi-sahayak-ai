@@ -1,5 +1,5 @@
 """
-API routes for Krishi Sahayak AI
+API routes for Krishi Sahayak
 """
 
 from fastapi import APIRouter

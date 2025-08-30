@@ -1,5 +1,5 @@
 """
-Core API endpoints for Krishi Sahayak AI
+Core API endpoints for Krishi Sahayak
 """
 
 import asyncio

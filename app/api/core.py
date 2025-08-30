@@ -14,7 +14,7 @@ router = APIRouter()
 def read_root():
     """Root endpoint with API information."""
     return {
-        "message": "Krishi Sahayak AI - Your Digital Farming Assistant",
+        "message": "Krishi Sahayak - Your Digital Farming Assistant",
         "version": "2.0.0",
         "description": "AI-powered agricultural assistant for Indian farmers",
         "endpoints": {
@@ -35,7 +35,7 @@ async def health_check():
     if krishi_agent is None:
         return HealthResponse(
             status="unhealthy",
-            service="Krishi Sahayak AI API",
+            service="Krishi Sahayak API",
             timestamp=datetime.now().isoformat(),
             version="2.0.0",
             details="AI agent not initialized"
@@ -47,7 +47,7 @@ async def health_check():
         if test_response and 'output' in test_response:
             return HealthResponse(
                 status="healthy",
-                service="Krishi Sahayak AI API",
+                service="Krishi Sahayak API",
                 timestamp=datetime.now().isoformat(),
                 version="2.0.0",
                 details="AI agent is working properly"
@@ -55,7 +55,7 @@ async def health_check():
         else:
             return HealthResponse(
                 status="unhealthy",
-                service="Krishi Sahayak AI API",
+                service="Krishi Sahayak API",
                 timestamp=datetime.now().isoformat(),
                 version="2.0.0",
                 details="AI agent response format error"
@@ -63,7 +63,7 @@ async def health_check():
     except Exception as e:
         return HealthResponse(
             status="unhealthy",
-            service="Krishi Sahayak AI API",
+            service="Krishi Sahayak API",
             timestamp=datetime.now().isoformat(),
             version="2.0.0",
             details=f"AI agent error: {str(e)}"
@@ -84,7 +84,7 @@ async def status_check():
     """Simple status check that doesn't require AI agent."""
     return {
         "status": "running",
-        "service": "Krishi Sahayak AI API",
+        "service": "Krishi Sahayak API",
         "timestamp": datetime.now().isoformat(),
         "version": "2.0.0",
         "message": "API is running"

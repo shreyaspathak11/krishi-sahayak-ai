@@ -1,18 +1,13 @@
 """
-Knowledge-based tools for Krishi Sahayak AI
+Knowledge-based tools for Krishi Sahayak
 Provides access to agricultural research and expertise
-Supports both local ChromaDB and remote Pinecone vector stores
 """
 
-import os
-
-# Use langchain_community.embeddings for better compatibility
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_core.tools import tool
 from langchain_chroma import Chroma
 from app.config import Config
 
-# Optional Pinecone imports (only if using remote vector store)
 try:
     from langchain_pinecone import PineconeVectorStore
     from pinecone import Pinecone

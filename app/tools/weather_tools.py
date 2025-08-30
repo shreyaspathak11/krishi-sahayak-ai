@@ -1,5 +1,5 @@
 """
-Consolidated Weather and Environmental Tools for Krishi Sahayak AI.
+Consolidated Weather and Environmental Tools for Krishi Sahayak.
 Provides weather forecast, air pollution, and UV index data using location names.
 """
 

@@ -1,5 +1,5 @@
 """
-Soil and Irrigation Advisory Tool for Krishi Sahayak AI.
+Soil and Irrigation Advisory Tool for Krishi Sahayak.
 Provides soil moisture-derived insights and irrigation guidance using government data.
 """
 import requests

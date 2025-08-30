@@ -1,11 +1,8 @@
 """
-Multilingual support service for Krishi Sahayak AI
+Multilingual support service for Krishi Sahayak
 Handles language detection, translation, and localized responses.
 """
-
-import json
-from typing import Dict, Optional, List
-from pathlib import Path
+from typing import Dict, List
 
 
 class LanguageService:
@@ -30,12 +27,12 @@ class LanguageService:
         # Language-specific farming terms and greetings
         self.language_templates = {
             "en": {
-                "greeting": "Hello! I'm Krishi Sahayak AI, your agricultural assistant.",
+                "greeting": "Hello! I'm Krishi Sahayak, your agricultural assistant.",
                 "error": "Sorry, I'm experiencing technical difficulties. Please try again later.",
                 "weather_intro": "Here's the weather information for your location:",
                 "market_intro": "Here are the current market prices:",
                 "soil_intro": "Based on your soil analysis:",
-                "farewell": "Thank you for using Krishi Sahayak AI. Happy farming!"
+                "farewell": "Thank you for using Krishi Sahayak. Happy farming!"
             },
             "hi": {
                 "greeting": "नमस्ते! मैं कृषि सहायक AI हूं, आपका कृषि सहायक।",
@@ -130,7 +127,7 @@ class LanguageService:
         language_name = self.supported_languages.get(language_code, "English")
         
         base_prompt = f"""
-        You are Krishi Sahayak AI, an expert agricultural assistant for Indian farmers. 
+        You are Krishi Sahayak, an expert agricultural assistant for Indian farmers. 
         Always respond in {language_name} language (language code: {language_code}).
 
         Important instructions:

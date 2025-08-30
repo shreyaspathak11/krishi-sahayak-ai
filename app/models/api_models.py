@@ -1,5 +1,5 @@
 """
-Pydantic models for Krishi Sahayak AI API
+Pydantic models for Krishi Sahayak API
 """
 
 from pydantic import BaseModel

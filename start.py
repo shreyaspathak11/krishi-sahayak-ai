@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Startup script for Krishi Sahayak AI
+Startup script for Krishi Sahayak
 """
 
 import os
@@ -40,7 +40,7 @@ def main():
     port = int(os.getenv("PORT", 8000))
     environment = os.getenv("ENVIRONMENT", "development")
     
-    print("🌾 Starting Krishi Sahayak AI...")
+    print("🌾 Starting Krishi Sahayak...")
     print(f"   Environment: {environment}")
     print(f"   Host: {host}")
     print(f"   Port: {port}")

@@ -1,5 +1,5 @@
 """
-API Package - Krishi Sahayak AI
+API Package - Krishi Sahayak
 """
 
 from .routes import router

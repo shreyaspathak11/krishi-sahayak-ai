@@ -1,7 +1,7 @@
-# Krishi Sahayak AI (कृषि सहायक AI)
+# Krishi Sahayak (कृषि सहायक AI)
 ![Image](https://github.com/shreyaspathak11/krishi-sahayak-ai/blob/main/assets/krishi_sahayak.png)
 ## 1. Project Vision & Executive Summary
-Krishi Sahayak AI is a revolutionary voice-first, AI-powered advisory platform engineered to empower the Indian farmer. It directly tackles the critical information gap in Indian agriculture caused by the digital divide and a lack of access to timely, reliable data.
+Krishi Sahayak is a revolutionary voice-first, AI-powered advisory platform engineered to empower the Indian farmer. It directly tackles the critical information gap in Indian agriculture caused by the digital divide and a lack of access to timely, reliable data.
 
 Our vision is to provide every farmer with a personal, trusted agricultural expert they can consult simply by making a phone call. By leveraging a sophisticated Agentic AI grounded in a Retrieval-Augmented Generation (RAG) architecture, our system delivers scientifically accurate, context-aware, and actionable advice. We move beyond generic information by integrating a unique "Goldmine" Knowledge Base derived from thousands of real-world Kisan Call Centre (KCC) transcripts, ensuring our advice is not just academically sound but also practically proven in the Indian context.
 
@@ -174,7 +174,7 @@ While voice will always be our primary interface, we will expand to other channe
 - **WhatsApp Integration**: A WhatsApp chatbot will allow farmers to send text queries and receive text-based answers, links, and even images (e.g., sending a photo of a diseased plant for analysis).
 - **Simple Mobile App**: A low-bandwidth mobile application will provide a graphical interface for accessing advisories, market prices, and news in a more structured format.
 
-By pursuing these advancements, Krishi Sahayak AI can evolve from an innovative project into an essential, life-changing tool for millions of farmers across India.
+By pursuing these advancements, Krishi Sahayak can evolve from an innovative project into an essential, life-changing tool for millions of farmers across India.
 
 ---
 

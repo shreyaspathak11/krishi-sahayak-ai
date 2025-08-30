@@ -1,5 +1,5 @@
 """
-Models Package - Krishi Sahayak AI
+Models Package - Krishi Sahayak
 """
 
 from .api_models import (

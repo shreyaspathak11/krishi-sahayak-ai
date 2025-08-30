@@ -1,5 +1,5 @@
 """
-Market-related tools for Krishi Sahayak AI
+Market-related tools for Krishi Sahayak
 Provides real-time crop prices from government sources
 """
 

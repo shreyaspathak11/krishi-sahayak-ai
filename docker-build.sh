@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🐳 Building Krishi Sahayak AI Docker image..."
+echo "🐳 Building Krishi Sahayak Docker image..."
 docker build -t krishi-sahayak-ai .
 
 if [ $? -eq 0 ]; then

@@ -1,4 +1,4 @@
-from typing import Dict, List, Any
+from typing import Dict, List
 import json
 
 from langchain_groq import ChatGroq
@@ -9,14 +9,15 @@ from app.config import Config
 from app.services.language_service import language_service
 from app.services.context_service import context_service
 import app.tools as tools
+from app.utils.logs import logger
 
 # --- AGENT SETUP ---
 
 def create_krishi_agent():
     """
-    Creates and returns the main agent executor for Krishi Sahayak AI.
+    Creates and returns the main agent executor for Krishi Sahayak.
     """
-    print("--- Initializing Krishi Sahayak AI Agent ---")
+    print("--- Initializing Krishi Sahayak Agent ---")
     
     llm = ChatGroq(
         model=Config.GROQ_LLM_MODEL,
@@ -51,14 +52,11 @@ def create_krishi_agent():
     agent_executor = AgentExecutor(
         agent=agent, 
         tools=available_tools, 
-        verbose=False,  # Turn off verbose to reduce noise
-        max_iterations=3,  # Limit iterations to prevent infinite loops
-        max_execution_time=30,  # Stop after 30 seconds
-        early_stopping_method="generate",  # Stop early if possible
-        handle_parsing_errors="Check your output and make sure it follows the correct format! For simple greetings, just respond naturally without using tools."
+        verbose=False,  
+        max_iterations=3,
+        max_execution_time=30,
+        early_stopping_method="generate",
     )
-    
-    print("--- Agent Initialized Successfully ---")
     return agent_executor
 
 def get_response(
@@ -79,7 +77,6 @@ def get_response(
     Returns:
         The AI's response as a string.
     """
-    print(f"\n--- Invoking Agent with Query: '{user_input}' ---")
 
     # Initialize defaults
     if chat_history is None:
@@ -121,23 +118,5 @@ def get_response(
         return final_response
         
     except Exception as e:
-        print(f"Error during agent execution: {e}")
-        # Return a language-specific error message
-        error_content = "I apologize, but I'm experiencing technical difficulties. Please try again later."
-        return language_service.translate_to(error_content, language_code)
-
-# --- Example Usage ---
-if __name__ == '__main__':
-    krishi_agent = create_krishi_agent()
-    
-    # Test with a simple query
-    current_query = "Hello, what can you help me with?"
-    
-    # Get the response
-    final_answer = get_response(
-        agent_executor=krishi_agent,
-        user_input=current_query,
-        language_code="en"
-    )
-    
-    print(f"\nFinal Answer:\n{final_answer}")
+        logger.error(f"Error in agent execution: {str(e)}")
+        return language_service.translate_to("Network error", language_code)

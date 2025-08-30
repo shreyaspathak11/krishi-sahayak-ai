@@ -1,5 +1,5 @@
 """
-Time and date tools for Krishi Sahayak AI
+Time and date tools for Krishi Sahayak
 Provides current time with agricultural context
 """
 

@@ -1,7 +1,3 @@
-"""
-Krishi Sahayak AI - Main Application Package
-"""
-
 # Core configuration
 from .config import Config
 

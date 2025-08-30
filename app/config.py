@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 
 
 class Config:
-    """Configuration class for Krishi Sahayak AI"""
+    """Configuration class for Krishi Sahayak"""
     
     # Load environment variables
     load_dotenv()
@@ -32,7 +32,8 @@ class Config:
 
     # Model Configuration
     GROQ_LLM_MODEL = os.getenv("GROQ_LLM_MODEL", "llama-3.1-8b-instant")
-    
+    SUMMARIZATION_MODEL = os.getenv("SUMMARIZATION_MODEL", "llama-3.1-8b-instant")
+
     # Production Settings
     ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
     HOST = os.getenv("HOST", "0.0.0.0")
@@ -50,27 +51,7 @@ class Config:
     def is_production(cls):
         """Check if running in production environment"""
         return cls.ENVIRONMENT.lower() == "production"
-    
-    @classmethod
-    def validate_required_env_vars(cls):
-        """Validate that required environment variables are set"""
-        required_vars = [
-            ("GROQ_API_KEY", cls.GROQ_API_KEY),
-            ("OPENWEATHERMAP_API_KEY", cls.OPEN_WEATHER_API_KEY)
-        ]
-        
-        missing_vars = []
-        for var_name, var_value in required_vars:
-            if not var_value:
-                missing_vars.append(var_name)
-        
-        if missing_vars:
-            raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
-        
-        return True
-    
 
-    # JSON-based System Prompt for structured responses
     AGENT_SYSTEM_PROMPT = """
         You are Krishi Sahayak, a helpful and knowledgeable assistant for Indian farmers.
 
@@ -91,7 +72,7 @@ class Config:
         - Greetings: "Hi", "Hello", "Good morning", "Namaste"
         - General questions: "How are you?", "What can you do?"
         - Introduction requests
-        - Example: {"response_type": "greeting", "needs_tools": false, "content": "Namaste! I'm Krishi Sahayak AI, your agricultural assistant. How can I help you today?", "language": "en", "confidence": 0.95, "tools_to_use": [], "context_type": "greeting"}
+        - Example: {"response_type": "greeting", "needs_tools": false, "content": "Namaste! I'm Krishi Sahayak, your agricultural assistant. How can I help you today?", "language": "en", "confidence": 0.95, "tools_to_use": [], "context_type": "greeting"}
 
         ### response_type: "general_knowledge" (needs_tools: false)
         - General farming practices questions
@@ -118,10 +99,10 @@ class Config:
         - Keep content concise and farmer-friendly
         - Detect language from input and set accordingly
         """
-    
 
-    SUMMARIZATION_PROMPT = (
-        """
+    @classmethod
+    def SUMMARIZATION_PROMPT(cls, chat_history):
+        return f"""
         You are a context summarizer for an agricultural AI assistant. 
         Your job is to summarize chat history into key farmer context that will help the AI provide better responses.
 
@@ -131,12 +112,11 @@ class Config:
         3. Current farming challenges or questions
         4. Farm characteristics (size, soil type, irrigation, etc.)
         5. Important agricultural context from the conversation
+        {chat_history}
 
         Create a concise summary that captures the essential context without losing important details.
         """
-    )
 
-    # JSON Response Parsing Configuration
     JSON_RESPONSE_SCHEMA = {
         "type": "object",
         "properties": {

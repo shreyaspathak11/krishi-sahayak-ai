@@ -1,5 +1,5 @@
 """
-Krishi Sahayak AI - Document Ingestion Pipeline
+Krishi Sahayak - Document Ingestion Pipeline
 Handles both PDF documents and KCC (Kisan Call Centre) data ingestion.
 """
 
@@ -28,7 +28,7 @@ from .ingest.ingest_pdfs import PDFDocumentIngester
 
 
 class KrishiIngestionPipeline:
-    """Document ingestion pipeline for Krishi Sahayak AI."""
+    """Document ingestion pipeline for Krishi Sahayak."""
     
     def __init__(self):
         self.source_documents_dir = "data/source_documents"
@@ -176,7 +176,7 @@ class KrishiIngestionPipeline:
 
 def main():
     """Main function to execute the document ingestion pipeline."""
-    logger.section("Krishi Sahayak AI - Document Ingestion Pipeline")
+    logger.section("Krishi Sahayak - Document Ingestion Pipeline")
     logger.info(f"Starting ingestion at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
     pipeline = KrishiIngestionPipeline()
