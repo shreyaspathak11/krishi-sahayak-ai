@@ -28,10 +28,19 @@ def read_root():
 
 @router.get("/health", response_model=HealthResponse)
 async def health_check():
-    """Health check endpoint."""
-    from app.main import krishi_agent
+    """Health check endpoint - responds immediately even during agent loading."""
+    from app.main import krishi_agent, agent_loading
     
-    # Check if the AI agent is properly initialized
+    if agent_loading:
+        # Agent is still initializing - but server IS healthy and running
+        return HealthResponse(
+            status="healthy",
+            service="Krishi Sahayak API",
+            timestamp=datetime.now().isoformat(),
+            version="2.0.0",
+            details="AI agent is initializing... API is ready."
+        )
+    
     if krishi_agent is None:
         return HealthResponse(
             status="unhealthy",
@@ -41,33 +50,15 @@ async def health_check():
             details="AI agent not initialized"
         )
     
-    try:
-        # Test a simple query to ensure the agent is working
-        test_response = krishi_agent.invoke({"input": "Hello", "chat_history": []})
-        if test_response and 'output' in test_response:
-            return HealthResponse(
-                status="healthy",
-                service="Krishi Sahayak API",
-                timestamp=datetime.now().isoformat(),
-                version="2.0.0",
-                details="AI agent is working properly"
-            )
-        else:
-            return HealthResponse(
-                status="unhealthy",
-                service="Krishi Sahayak API",
-                timestamp=datetime.now().isoformat(),
-                version="2.0.0",
-                details="AI agent response format error"
-            )
-    except Exception as e:
-        return HealthResponse(
-            status="unhealthy",
-            service="Krishi Sahayak API",
-            timestamp=datetime.now().isoformat(),
-            version="2.0.0",
-            details=f"AI agent error: {str(e)}"
-        )
+    # Agent is loaded - report healthy without running a test query
+    # (test queries in health checks are expensive and slow on Render)
+    return HealthResponse(
+        status="healthy",
+        service="Krishi Sahayak API",
+        timestamp=datetime.now().isoformat(),
+        version="2.0.0",
+        details="AI agent is ready"
+    )
 
 
 @router.options("/{full_path:path}")

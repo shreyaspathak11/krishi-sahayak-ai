@@ -4,11 +4,14 @@ langchain
 langchain-community
 langchain-core
 langchain-groq
-langchain-chroma
-chromadb
 
-# HuggingFace for embeddings (using langchain-community)
-sentence-transformers
+# Pinecone vector store (remote)
+langchain-pinecone
+pinecone-client
+
+# Remote Embeddings (HuggingFace Inference API)
+# We use this instead of sentence-transformers to avoid 400MB+ local model
+langchain-huggingface
 huggingface-hub
 
 # Web Server - Essential only
@@ -29,16 +32,8 @@ pytz
 # For PDF processing
 pypdf
 
-# Optional: For Pinecone (comment out if not using)
-# langchain-pinecone
-# pinecone-client
-
-# Optional: For advanced ML features (comment out if not needed)
+# REMOVED: heavy local ML libraries
+# sentence-transformers (400MB+)
+# torch (700MB+)
 # transformers
-# torch
-
-# Optional: For telephony (comment out if not using)
-# twilio
-
-# Optional: For OpenAI integration (comment out if not using)
-# openai>=1.0.0
+# chromadb

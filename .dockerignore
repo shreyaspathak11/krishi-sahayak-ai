@@ -88,5 +88,12 @@ coverage.xml
 # pyenv
 .python-version
 
-# Large data files that might not be needed
+# Large data files not needed (using Pinecone remote vector store)
 data/kcc_cache/*.json
+vector_store/
+data/source_documents/
+
+# Profiling scripts
+profile_startup.py
+profile_results.txt
+results.txt

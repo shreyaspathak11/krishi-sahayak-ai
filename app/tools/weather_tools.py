@@ -1,21 +1,35 @@
 """
 Consolidated Weather and Environmental Tools for Krishi Sahayak.
 Provides weather forecast, air pollution, and UV index data using location names.
+Lazy-loads pyowm to speed up application startup (~2.5s saved).
 """
 
 from datetime import datetime
 from langchain_core.tools import tool
-from pyowm import OWM
-from pyowm.commons.exceptions import NotFoundError
 from app.config import Config
 
-# --- INITIALIZATION ---
-try:
-    owm = OWM(Config.OPEN_WEATHER_API_KEY)
-    mgr = owm.weather_manager()
-except Exception as e:
-    print(f"CRITICAL: Failed to initialize OpenWeatherMap client. Check API key. Error: {e}")
-    mgr = None
+# --- LAZY INITIALIZATION ---
+# pyowm is imported lazily because it loads a huge city ID registry at import time (~2.5s)
+_mgr = None
+_owm_initialized = False
+_NotFoundError = None
+
+
+def _get_weather_manager():
+    """Lazily initialize the OpenWeatherMap client on first use."""
+    global _mgr, _owm_initialized, _NotFoundError
+    if not _owm_initialized:
+        _owm_initialized = True
+        try:
+            from pyowm import OWM
+            from pyowm.commons.exceptions import NotFoundError
+            _NotFoundError = NotFoundError
+            owm = OWM(Config.OPEN_WEATHER_API_KEY)
+            _mgr = owm.weather_manager()
+        except Exception as e:
+            print(f"CRITICAL: Failed to initialize OpenWeatherMap client. Check API key. Error: {e}")
+            _mgr = None
+    return _mgr
 
 # --- PRIMARY TOOLS ---
 
@@ -28,6 +42,7 @@ def get_weather_forecast(location: str) -> str:
     Args:
         location (str): The city or district name, e.g., "Hisar", "Ludhiana", "Pune".
     """
+    mgr = _get_weather_manager()
     if not mgr:
         return "Weather service is currently unavailable. Please try again later."
     
@@ -70,16 +85,16 @@ def get_weather_forecast(location: str) -> str:
                 continue
             min_temp, max_temp = min(data['temps']), max(data['temps'])
             most_common_condition = max(set(data['conditions']), key=data['conditions'].count)
-            day_str = f"- {date}: Min Temp: {min_temp:.1f}°C, Max Temp: {max_temp:.1f}°C. General condition: {most_common_condition}."
+            day_str = f"- {date}: Min Temp: {min_temp:.1f}C, Max Temp: {max_temp:.1f}C. General condition: {most_common_condition}."
             if data['rain_chance']:
                 day_str += " There is a chance of rain."
             summary += day_str + "\n"
         
         return summary.strip()
         
-    except NotFoundError:
-        return f"I'm sorry, I could not find a location named '{location}'. Please provide a more specific city or district name."
     except Exception as e:
+        if _NotFoundError and isinstance(e, _NotFoundError):
+            return f"I'm sorry, I could not find a location named '{location}'. Please provide a more specific city or district name."
         return f"An error occurred while fetching the weather forecast for {location}: {e}"
 
 @tool
@@ -90,6 +105,7 @@ def get_air_pollution_data(location: str) -> str:
     Args:
         location (str): The city or district name, e.g., "Hisar", "Ludhiana", "Pune".
     """
+    mgr = _get_weather_manager()
     if not mgr:
         return "Environmental services are currently unavailable."
     
@@ -111,9 +127,9 @@ def get_air_pollution_data(location: str) -> str:
         
         return f"The current Air Quality Index (AQI) in {location} is {aqi}. {advice}"
         
-    except NotFoundError:
-        return f"I'm sorry, I could not find a location named '{location}' to check the air quality."
     except Exception as e:
+        if _NotFoundError and isinstance(e, _NotFoundError):
+            return f"I'm sorry, I could not find a location named '{location}' to check the air quality."
         return f"An error occurred while fetching air pollution data for {location}: {e}"
 
 @tool
@@ -124,6 +140,7 @@ def get_uv_index(location: str) -> str:
     Args:
         location (str): The city or district name, e.g., "Hisar", "Ludhiana", "Pune".
     """
+    mgr = _get_weather_manager()
     if not mgr:
         return "Environmental services are currently unavailable."
         
@@ -146,7 +163,7 @@ def get_uv_index(location: str) -> str:
         
         return f"The current UV Index in {location} is {uv_value:.1f} ({risk}). {advice}"
         
-    except NotFoundError:
-        return f"I'm sorry, I could not find a location named '{location}' to check the UV index."
     except Exception as e:
+        if _NotFoundError and isinstance(e, _NotFoundError):
+            return f"I'm sorry, I could not find a location named '{location}' to check the UV index."
         return f"An error occurred while fetching UV Index data for {location}: {e}"

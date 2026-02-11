@@ -9,7 +9,7 @@ ENV PORT=8000
 # Set the working directory in the container
 WORKDIR /app
 
-# Install system dependencies (minimal set)
+# Install system dependencies (minimal set for building wheels)
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
@@ -21,6 +21,7 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 
 # Upgrade pip and install Python dependencies
+# We use --no-cache-dir to keep the image small
 RUN pip install --upgrade pip --no-cache-dir \
     && pip install --no-cache-dir -r requirements.txt
 
@@ -28,9 +29,9 @@ RUN pip install --upgrade pip --no-cache-dir \
 COPY . .
 
 # Create necessary directories
-RUN mkdir -p vector_store data/source_documents
+RUN mkdir -p data/source_documents
 
-# Create a non-root user
+# Create a non-root user for security
 RUN useradd --create-home --shell /bin/bash app \
     && chown -R app:app /app
 USER app
@@ -38,9 +39,9 @@ USER app
 # Expose the port the app runs on
 EXPOSE $PORT
 
-# Health check that works without curl
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD python -c "import requests; import os; response = requests.get(f'http://localhost:{os.getenv(\"PORT\", 8000)}/health', timeout=5); exit(0 if response.status_code == 200 else 1)" || exit 1
+# Lightweight health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD python -c "import requests; import os; response = requests.get(f'http://localhost:{os.getenv(\"PORT\", 8000)}/status', timeout=5); exit(0 if response.status_code == 200 else 1)" || exit 1
 
-# Command to run your application using the same start.py approach
+# Command to run your application
 CMD python start.py

@@ -6,7 +6,7 @@ from . import api
 from . import models
 from . import services
 from . import tools
-from . import rag_pipeline
+
 
 # Expose main components
 __all__ = [
@@ -15,5 +15,4 @@ __all__ = [
     "models", 
     "services",
     "tools",
-    "rag_pipeline"
 ]
