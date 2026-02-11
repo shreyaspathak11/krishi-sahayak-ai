@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import router
 from app.config import Config
 from app.services import create_krishi_agent
+from app.tools.knowledge_tools import warm_up_knowledge_base
 
 # --- LOGGING CONFIGURATION ---
 logging.basicConfig(
@@ -59,15 +60,19 @@ async def _init_agent_background():
     global krishi_agent, agent_loading
     
     try:
-        # Run the CPU-heavy agent creation in a thread pool to not block the event loop
+        # Pre-warm knowledge base if available
+        logger.info("Pre-warming components...")
         loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, warm_up_knowledge_base)
+        
+        # Run the CPU-heavy agent creation in a thread pool to not block the event loop
         krishi_agent = await loop.run_in_executor(None, create_krishi_agent)
         
-        logger.info("Krishi Sahayak AI agent initialized successfully!")
-        logger.info("Ready to serve farmers!")
+        logger.info("✓ Krishi Sahayak AI agent initialized successfully!")
+        logger.info("✓ Ready to serve farmers!")
         
     except Exception as e:
-        logger.error(f"Error during agent initialization: {e}")
+        logger.error(f"Error during initialization: {e}")
         logger.error("AI agent initialization failed, but API will continue to run")
         krishi_agent = None
     finally:

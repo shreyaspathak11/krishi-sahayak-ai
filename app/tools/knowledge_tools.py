@@ -37,6 +37,7 @@ def _get_vector_store():
         from langchain_pinecone import PineconeVectorStore
         from pinecone import Pinecone
         
+        logger.info("Initializing Pinecone vector store...")
         pc = Pinecone(api_key=Config.PINECONE_API_KEY)
         
         # Verify index exists
@@ -46,6 +47,7 @@ def _get_vector_store():
             return None
         
         # Setup remote embeddings via HuggingFace
+        logger.info("Loading HuggingFace embeddings...")
         embeddings = HuggingFaceEndpointEmbeddings(
             model=Config.PINECONE_EMBEDDINGS_MODEL,
             task="feature-extraction",
@@ -57,12 +59,21 @@ def _get_vector_store():
             index=pc.Index(Config.PINECONE_INDEX_NAME),
             embedding=embeddings
         )
-        logger.info("Pinecone initialized")
+        logger.info("✓ Pinecone vector store ready")
         return _vectorstore
         
     except Exception as e:
         logger.error(f"Pinecone init failed: {e}")
         return None
+
+
+def warm_up_knowledge_base():
+    """Pre-warm knowledge base on app startup (optional, non-blocking)."""
+    try:
+        logger.info("Pre-warming knowledge base...")
+        _get_vector_store()
+    except Exception as e:
+        logger.warning(f"Knowledge base warm-up skipped: {e}")
 
 
 @tool
@@ -73,15 +84,19 @@ def get_crop_advisory(query: str) -> str:
     if not vectorstore:
         return "Knowledge base unavailable. Check Pinecone configuration."
     
-    docs = vectorstore.as_retriever(search_kwargs={"k": 3}).invoke(query)
-    
-    if not docs:
-        return "No relevant info found. Try rephrasing or ask about rice, wheat, tomato, etc."
-    
-    response = "Agricultural Research Findings:\n" + "=" * 40 + "\n\n"
-    for i, doc in enumerate(docs, 1):
-        response += f"Finding {i}:\n{doc.page_content}\n"
-        if i < len(docs):
-            response += "\n" + "-" * 30 + "\n\n"
-    
-    return response + "\nSource: IARI agricultural database via Pinecone"
+    try:
+        docs = vectorstore.as_retriever(search_kwargs={"k": 3}).invoke(query)
+        
+        if not docs:
+            return "No relevant info found. Try rephrasing or ask about rice, wheat, tomato, etc."
+        
+        response = "Agricultural Research Findings:\n" + "=" * 40 + "\n\n"
+        for i, doc in enumerate(docs, 1):
+            response += f"Finding {i}:\n{doc.page_content}\n"
+            if i < len(docs):
+                response += "\n" + "-" * 30 + "\n\n"
+        
+        return response + "\nSource: IARI agricultural database via Pinecone"
+    except Exception as e:
+        logger.error(f"Query failed: {e}")
+        return f"Query error: {str(e)}"
