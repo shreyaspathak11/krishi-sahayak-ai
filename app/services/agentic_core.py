@@ -2,8 +2,11 @@ from typing import Dict, List
 import json
 
 from langchain_groq import ChatGroq
-from langchain.agents import create_tool_calling_agent, AgentExecutor
+from langchain.agents import AgentExecutor
+from langchain.agents.output_parsers.openai_tools import OpenAIToolsAgentOutputParser
+from langchain.agents.format_scratchpad.openai_tools import format_to_openai_tool_messages
 from langchain_core.prompts import ChatPromptTemplate
+from langchain.tools.render import format_tool_to_openai_tool
 
 from app.config import Config
 from app.services.language_service import language_service
@@ -27,7 +30,7 @@ def create_krishi_agent():
         request_timeout=30
     )
     
-    # 1. Consolidate and simplify the list of available tools
+    # Available tools
     available_tools = [
         tools.get_weather_forecast,
         tools.get_air_pollution_data,
@@ -39,7 +42,7 @@ def create_krishi_agent():
         tools.get_current_datetime,
     ]
     
-    # 2. Use JSON prompting system prompt
+    # Build prompt with tools
     prompt = ChatPromptTemplate.from_messages([
         ("system", Config.AGENT_SYSTEM_PROMPT),
         ("placeholder", "{chat_history}"),
@@ -47,7 +50,17 @@ def create_krishi_agent():
         ("placeholder", "{agent_scratchpad}"),
     ])
 
-    agent = create_tool_calling_agent(llm, available_tools, prompt)
+    # Bind tools to LLM
+    llm_with_tools = llm.bind(
+        tools=[format_tool_to_openai_tool(t) for t in available_tools]
+    )
+    
+    # Create agent runnable
+    agent = (
+        prompt
+        | llm_with_tools
+        | OpenAIToolsAgentOutputParser()
+    )
     
     agent_executor = AgentExecutor(
         agent=agent, 
