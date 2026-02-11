@@ -1,39 +1,10 @@
-# Core AI and Logic - Minimal set
-groq
+# Minimal Core Dependencies
 langchain==0.1.13
-langchain-community>=0.0.29
-langchain-core==0.1.30
 langchain-groq
-
-# Pinecone vector store (remote)
-langchain-pinecone
-pinecone-client
-
-# Remote Embeddings (HuggingFace Inference API)
-# We use this instead of sentence-transformers to avoid 400MB+ local model
-langchain-huggingface
-huggingface-hub
-
-# Web Server - Essential only
-fastapi
-uvicorn[standard]
-pydantic
-
-# Data Processing - Essential only
-requests
-python-dotenv
-
-# Weather API
-pyowm
-
-# Utilities
-pytz
-
-# For PDF processing
-pypdf
-
-# REMOVED: heavy local ML libraries
-# sentence-transformers (400MB+)
-# torch (700MB+)
-# transformers
-# chromadb
+fastapi==0.128.0
+uvicorn==0.40.0
+pydantic==2.12.0
+python-dotenv==1.2.0
+requests==2.32.0
+PyYAML==6.0.3
+pytz==2025.2
