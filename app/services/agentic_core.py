@@ -2,8 +2,8 @@ from typing import Dict, List
 import json
 
 from langchain_groq import ChatGroq
-from langchain.agents import create_tool_calling_agent
-from langchain.agents.agent import AgentExecutor
+from langchain.agents.tool_calling_agent.base import create_tool_calling_agent
+from langchain.agents import AgentExecutor
 from langchain_core.prompts import ChatPromptTemplate
 
 from app.config import Config
