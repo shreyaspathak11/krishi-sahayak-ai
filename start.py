@@ -40,6 +40,12 @@ def main():
     port = int(os.getenv("PORT", 8000))
     environment = os.getenv("ENVIRONMENT", "development")
     
+    # Render requires 127.0.0.1, Docker uses 0.0.0.0
+    if environment == "production":
+        host = "127.0.0.1"
+    else:
+        host = "0.0.0.0"
+    
     print("🌾 Starting Krishi Sahayak...")
     print(f"   Environment: {environment}")
     print(f"   Host: {host}")
