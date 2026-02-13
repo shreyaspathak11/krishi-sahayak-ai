@@ -6,6 +6,7 @@ Lazy-loads pyowm to speed up application startup (~2.5s saved).
 
 from datetime import datetime
 import re
+import requests
 from langchain_core.tools import tool
 from app.config import Config
 
@@ -53,6 +54,36 @@ def _extract_clean_location(location_param: str) -> str:
     
     return location_param if location_param else None
 
+def _get_city_from_coordinates(lat: float, lon: float) -> str:
+    """
+    Reverse geocode coordinates to get city/state name.
+    Uses free Nominatim API from OpenStreetMap.
+    """
+    try:
+        url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lon}"
+        headers = {'User-Agent': 'KrishiSahayak/1.0'}
+        response = requests.get(url, headers=headers, timeout=5)
+        
+        if response.status_code == 200:
+            data = response.json()
+            address = data.get('address', {})
+            
+            # Try to get city/town/village name
+            city = address.get('city') or address.get('town') or address.get('village')
+            state = address.get('state')
+            country = address.get('country')
+            
+            if city and state:
+                return f"{city}, {state}"
+            elif city:
+                return city
+            elif state:
+                return state
+    except Exception as e:
+        print(f"Reverse geocoding failed: {e}")
+    
+    return None
+
 # --- PRIMARY TOOLS ---
 
 @tool
@@ -83,7 +114,13 @@ def get_weather_forecast(location: str) -> str:
                 lat, lon = float(parts[0].strip()), float(parts[1].strip())
                 # Use coordinates to get forecast
                 forecast = mgr.forecast_at_coords(lat, lon, '3h').forecast
-                location_display = f"coordinates ({lat}, {lon})"
+                
+                # Try to get city name from coordinates
+                city_name = _get_city_from_coordinates(lat, lon)
+                if city_name:
+                    location_display = city_name
+                else:
+                    location_display = f"{lat:.2f}°N, {lon:.2f}°E"
             else:
                 # Not valid coordinates, treat as city name
                 forecast = mgr.forecast_at_place(location, '3h').forecast
