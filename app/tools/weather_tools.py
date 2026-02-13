@@ -37,9 +37,13 @@ def _extract_clean_location(location_param: str) -> str:
     """
     Extracts clean location value from tool parameter.
     Removes context text like 'location = "Hisar"' and returns just 'Hisar'
+    Handles quoted values: "23.49,87.33" -> 23.49,87.33
     """
     if not location_param:
         return None
+    
+    # First, strip leading/trailing whitespace and quotes
+    location_param = location_param.strip().strip('\'"')
     
     # Remove 'location = ' prefix if present
     if 'location' in location_param.lower() and '=' in location_param:
@@ -50,6 +54,7 @@ def _extract_clean_location(location_param: str) -> str:
     
     # Remove any trailing context text (e.g., " (default location...")
     location_param = re.sub(r'\s*\([^)]*\).*$', '', location_param)
+    # Final strip of quotes
     location_param = location_param.strip('\'"')
     
     return location_param if location_param else None
