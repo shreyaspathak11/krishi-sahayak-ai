@@ -117,7 +117,6 @@ Thought: {agent_scratchpad}""")
         verbose=False,
         max_iterations=5,
         max_execution_time=60,
-        early_stopping_method="generate",
         handle_parsing_errors=True,
     )
     
