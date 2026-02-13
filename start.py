@@ -19,6 +19,13 @@ load_dotenv()
 def main():
     """Main startup function"""
     
+    # Set UTF-8 encoding for console output
+    import io
+    import sys
+    if sys.stdout.encoding.lower() != 'utf-8':
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+    
     # Check for required environment variables
     required_env_vars = ["GROQ_API_KEY", "OPENWEATHERMAP_API_KEY"]
     missing_vars = []
@@ -28,7 +35,7 @@ def main():
             missing_vars.append(var)
     
     if missing_vars:
-        print("❌ Error: Missing required environment variables:")
+        print("[ERROR] Missing required environment variables:")
         for var in missing_vars:
             print(f"   - {var}")
         print("\nPlease create a .env file or set these environment variables.")
@@ -46,19 +53,25 @@ def main():
     else:
         host = "0.0.0.0"
     
-    print("🌾 Starting Krishi Sahayak...")
+    print("[INFO] Starting Krishi Sahayak...")
     print(f"   Environment: {environment}")
     print(f"   Host: {host}")
     print(f"   Port: {port}")
     
     # Run the application
-    uvicorn.run(
-        "app.main:app",
-        host=host,
-        port=port,
-        reload=environment == "development",
-        log_level="info"
-    )
+    try:
+        uvicorn.run(
+            "app.main:app",
+            host=host,
+            port=port,
+            reload=environment == "development",
+            log_level="info"
+        )
+    except Exception as e:
+        print(f"[ERROR] Server failed to start: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

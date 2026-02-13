@@ -121,7 +121,7 @@ Thought: {agent_scratchpad}""")
         handle_parsing_errors=True,
     )
     
-    print("✓ AI agent initialized successfully with ReAct tool calling")
+    print("[OK] AI agent initialized successfully with ReAct tool calling")
     return agent_executor
 
 def get_response(

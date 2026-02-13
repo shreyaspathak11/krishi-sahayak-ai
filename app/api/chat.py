@@ -82,7 +82,9 @@ async def chat(request: ChatRequest):
         )
         
     except Exception as e:
-        logger.error(f"Error in chat endpoint: {e}")
+        logger.error(f"Error in chat endpoint: {e}", exc_info=True)
+        import traceback
+        traceback.print_exc()
         
         from app.models import ChatResponse
         return ChatResponse(

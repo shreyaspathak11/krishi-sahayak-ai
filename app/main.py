@@ -68,8 +68,8 @@ async def _init_agent_background():
         # Run the CPU-heavy agent creation in a thread pool to not block the event loop
         krishi_agent = await loop.run_in_executor(None, create_krishi_agent)
         
-        logger.info("✓ Krishi Sahayak AI agent initialized successfully!")
-        logger.info("✓ Ready to serve farmers!")
+        logger.info("[OK] Krishi Sahayak AI agent initialized successfully!")
+        logger.info("[OK] Ready to serve farmers!")
         
     except Exception as e:
         logger.error(f"Error during initialization: {e}")
