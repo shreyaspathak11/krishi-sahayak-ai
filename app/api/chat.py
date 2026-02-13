@@ -99,7 +99,8 @@ async def generate_chat_stream(request: ChatRequest) -> AsyncGenerator[str, None
     krishi_agent = get_krishi_agent()
     
     try:
-        response = get_response(
+        # Get response and tool calls
+        ai_response, tool_calls = get_response(
             krishi_agent, 
             request.message,
             language_code=request.language,
@@ -107,7 +108,7 @@ async def generate_chat_stream(request: ChatRequest) -> AsyncGenerator[str, None
         )
         
         # Stream the response word by word
-        words = response.split()
+        words = ai_response.split()
         
         for i, word in enumerate(words):
             chunk_data = {
