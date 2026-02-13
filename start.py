@@ -60,15 +60,25 @@ def main():
     
     # Run the application
     try:
-        uvicorn.run(
+        # Use specific Uvicorn config to ensure it doesn't exit prematurely
+        config = uvicorn.Config(
             "app.main:app",
             host=host,
             port=port,
-            reload=environment == "development",
-            log_level="info"
+            reload=False,  # Disable reload in production
+            log_level="info",
+            access_log=True,
+            lifespan="auto"
         )
+        server = uvicorn.Server(config)
+        # This will block indefinitely
+        import asyncio
+        asyncio.run(server.serve())
+    except KeyboardInterrupt:
+        print("[INFO] Server shutting down...")
+        sys.exit(0)
     except Exception as e:
-        print(f"[ERROR] Server failed to start: {e}")
+        print(f"[ERROR] Server failed: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

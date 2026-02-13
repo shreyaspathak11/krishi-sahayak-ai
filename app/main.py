@@ -60,20 +60,27 @@ async def _init_agent_background():
     global krishi_agent, agent_loading
     
     try:
-        # Pre-warm knowledge base if available
-        logger.info("Pre-warming components...")
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, warm_up_knowledge_base)
+        try:
+            # Pre-warm knowledge base if available
+            logger.info("Pre-warming components...")
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, warm_up_knowledge_base)
+        except Exception as e:
+            logger.warning(f"Knowledge base warmup failed (non-critical): {e}")
         
-        # Run the CPU-heavy agent creation in a thread pool to not block the event loop
-        krishi_agent = await loop.run_in_executor(None, create_krishi_agent)
+        try:
+            # Run the CPU-heavy agent creation in a thread pool to not block the event loop
+            krishi_agent = await loop.run_in_executor(None, create_krishi_agent)
+        except Exception as e:
+            logger.error(f"Failed to initialize agent: {e}")
+            krishi_agent = None
+            return
         
         logger.info("[OK] Krishi Sahayak AI agent initialized successfully!")
         logger.info("[OK] Ready to serve farmers!")
         
     except Exception as e:
-        logger.error(f"Error during initialization: {e}")
-        logger.error("AI agent initialization failed, but API will continue to run")
+        logger.error(f"Unexpected error during initialization: {e}", exc_info=True)
         krishi_agent = None
     finally:
         agent_loading = False
