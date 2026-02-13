@@ -5,6 +5,7 @@ Lazy-loads pyowm to speed up application startup (~2.5s saved).
 """
 
 from datetime import datetime
+import re
 from langchain_core.tools import tool
 from app.config import Config
 
@@ -31,6 +32,27 @@ def _get_weather_manager():
             _mgr = None
     return _mgr
 
+def _extract_clean_location(location_param: str) -> str:
+    """
+    Extracts clean location value from tool parameter.
+    Removes context text like 'location = "Hisar"' and returns just 'Hisar'
+    """
+    if not location_param:
+        return None
+    
+    # Remove 'location = ' prefix if present
+    if 'location' in location_param.lower() and '=' in location_param:
+        # Extract the quoted or unquoted value after '='
+        match = re.search(r'=\s*["\']?([^"\'\n]+)["\']?', location_param)
+        if match:
+            location_param = match.group(1).strip()
+    
+    # Remove any trailing context text (e.g., " (default location...")
+    location_param = re.sub(r'\s*\([^)]*\).*$', '', location_param)
+    location_param = location_param.strip('\'"')
+    
+    return location_param if location_param else None
+
 # --- PRIMARY TOOLS ---
 
 @tool
@@ -46,6 +68,9 @@ def get_weather_forecast(location: str) -> str:
     mgr = _get_weather_manager()
     if not mgr:
         return "Weather service is currently unavailable. Please try again later."
+    
+    # Clean location parameter - remove context text if present
+    location = _extract_clean_location(location) or location
     
     print(f"--- Calling Weather Tool for Location: {location} ---")
     
@@ -109,14 +134,9 @@ def get_weather_forecast(location: str) -> str:
         day_str = f"- {date}: Min Temp: {min_temp:.1f}C, Max Temp: {max_temp:.1f}C. General condition: {most_common_condition}."
         if data['rain_chance']:
             day_str += " There is a chance of rain."
-            summary += day_str + "\n"
-        
-        return summary.strip()
-        
-    except Exception as e:
-        if _NotFoundError and isinstance(e, _NotFoundError):
-            return f"I'm sorry, I could not find a location named '{location}'. Please provide a more specific city or district name."
-        return f"An error occurred while fetching the weather forecast for {location}: {e}"
+        summary += day_str + "\n"
+    
+    return summary.strip()
 
 @tool
 def get_air_pollution_data(location: str) -> str:

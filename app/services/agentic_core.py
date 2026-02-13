@@ -1,5 +1,6 @@
 from typing import Dict, List
 import json
+import re
 
 from langchain_groq import ChatGroq
 from langchain.agents import create_react_agent, AgentExecutor
@@ -11,6 +12,31 @@ from app.services.language_service import language_service
 from app.services.context_service import context_service
 import app.tools as tools
 from app.utils.logs import logger
+
+# --- HELPER FUNCTIONS ---
+
+def extract_location_from_parameter(location_param: str) -> str:
+    """
+    Extracts clean location value from tool parameter.
+    Removes context text like 'location = "Hisar"' and returns just 'Hisar'
+    """
+    if not location_param:
+        return None
+    
+    # Remove 'location = ' prefix if present
+    if 'location' in location_param.lower() and '=' in location_param:
+        # Extract the quoted or unquoted value after '='
+        match = re.search(r'=\s*["\']?([^"\'\n]+)["\']?', location_param)
+        if match:
+            location_param = match.group(1).strip()
+    
+    # Remove any trailing context text (e.g., " (default location...")
+    location_param = re.sub(r'\s*\([^)]*\).*$', '', location_param)
+    location_param = location_param.strip('\'"')
+    
+    return location_param if location_param else None
+    
+    return location_param if location_param else None
 
 # --- CALLBACK HANDLER FOR TRACKING TOOL CALLS ---
 
@@ -79,23 +105,25 @@ def create_krishi_agent():
     prompt = PromptTemplate.from_template("""You are Krishi Sahayak, an agricultural assistant for Indian farmers.
 Help farmers with weather forecasts, market prices, soil advice, crop guidance, and agricultural news.
 
-CRITICAL INSTRUCTIONS:
-- When a farmer asks about weather, ALWAYS use get_weather_forecast tool
-- Extract the location from their question (e.g., "Hisar", "Ludhiana", "Pune", their current location, their farm location)
-- If NO location is mentioned, use "Hisar" as the default location for North India
-- For South India, use "Pune" or "Bangalore" as defaults
-- NEVER ask the user for location - ALWAYS use the tool with extracted or default location
-- Use the appropriate tool immediately - don't hesitate
-- Respond in simple, practical language farmers understand
+CRITICAL INSTRUCTIONS FOR TOOL PARAMETERS:
+- When calling get_weather_forecast: Extract ONLY the location name or coordinates from context
+  - Examples of CORRECT tool input: "Hisar", "Ludhiana", "23.49,87.33"
+  - WRONG format: "location = Hisar" or any variable assignment text
+  - If user mentions a location in their question, extract just that city name
+  - If NO location is mentioned, use "Hisar" as default for North India
+
+- For all tools: Provide ONLY the actual parameter values, NOT variable assignments
+- Extract location from user context if available
+- NEVER include "location = " or other context text in tool parameters
 
 Available tools:
 {tools}
 
 Format:
 Question: the input question to answer
-Thought: briefly think about which tool to use and what parameters
+Thought: briefly think about which tool to use and what location/parameters
 Action: the tool name from {tool_names}
-Action Input: the input parameters for the tool
+Action Input: ONLY the actual parameter value (e.g., "Hisar" not "location = Hisar")
 Observation: the result
 Thought: (if needed, use another tool or provide final answer)
 Final Answer: clear answer to help the farmer
