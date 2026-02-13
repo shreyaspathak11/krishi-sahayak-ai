@@ -27,6 +27,7 @@ def get_krishi_agent():
 async def chat(request: ChatRequest):
     """
     Simple chat endpoint with optional streaming support.
+    Returns response with tool usage information for frontend display.
     """
     krishi_agent = get_krishi_agent()
     
@@ -49,22 +50,41 @@ async def chat(request: ChatRequest):
                 }
             )
         
-        ai_response = get_response(
+        # Get response and tool calls
+        ai_response, tool_calls = get_response(
             krishi_agent, 
             request.message,
             language_code=request.language,
             chat_history=request.chat_history
         )
         
+        # Build response with tool information
+        from app.models import ChatResponse, ToolCall
+        
+        tool_call_objects = []
+        if tool_calls:
+            for tool_call in tool_calls:
+                tool_call_objects.append(
+                    ToolCall(
+                        name=tool_call.get("name", ""),
+                        description=tool_call.get("description", ""),
+                        input=tool_call.get("input", {}),
+                        output=tool_call.get("output", ""),
+                        status=tool_call.get("status", "success")
+                    )
+                )
+        
         return ChatResponse(
             response=ai_response,
             session_id=request.session_id,
-            timestamp=datetime.now().isoformat()
+            timestamp=datetime.now().isoformat(),
+            tool_calls=tool_call_objects
         )
         
     except Exception as e:
         logger.error(f"Error in chat endpoint: {e}")
         
+        from app.models import ChatResponse
         return ChatResponse(
             response=language_service.get_template(request.language, "error"),
             session_id=request.session_id,

@@ -15,11 +15,23 @@ class ChatRequest(BaseModel):
     stream: Optional[bool] = False  # Whether to return streaming response
 
 
+class ToolCall(BaseModel):
+    """Information about a tool that was called."""
+    name: str
+    description: str
+    input: Dict[str, Any]
+    output: str
+    status: str = "success"  # success, pending, error
+
+
 class ChatResponse(BaseModel):
-    """Standard chat response model."""
-    response: str
+    """Standard chat response model with tool tracking."""
+    response: str  # Final answer to show user
     timestamp: Optional[str] = None
     session_id: Optional[str] = None
+    tool_calls: Optional[List[ToolCall]] = []  # Tools that were used
+    thinking_process: Optional[str] = None  # Intermediate reasoning (optional)
+    sources: Optional[List[str]] = []  # Data sources used
 
 
 class SessionInfo(BaseModel):

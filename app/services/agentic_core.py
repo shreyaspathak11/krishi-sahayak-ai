@@ -3,6 +3,7 @@ import json
 
 from langchain_groq import ChatGroq
 from langchain.agents import create_react_agent, AgentExecutor
+from langchain.callbacks.base import BaseCallbackHandler
 from langchain_core.prompts import PromptTemplate
 
 from app.config import Config
@@ -10,6 +11,40 @@ from app.services.language_service import language_service
 from app.services.context_service import context_service
 import app.tools as tools
 from app.utils.logs import logger
+
+# --- CALLBACK HANDLER FOR TRACKING TOOL CALLS ---
+
+class ToolCallbackHandler(BaseCallbackHandler):
+    """Tracks tool calls for frontend display."""
+    
+    def __init__(self):
+        self.tool_calls: List[Dict] = []
+        self.current_tool = None
+    
+    def on_tool_start(self, serialized: Dict, input_str: str, **kwargs):
+        """Called when a tool is about to be invoked."""
+        self.current_tool = {
+            "name": serialized.get("name", "unknown"),
+            "description": serialized.get("description", ""),
+            "input": input_str,
+            "status": "pending"
+        }
+    
+    def on_tool_end(self, output: str, **kwargs):
+        """Called when a tool finishes execution."""
+        if self.current_tool:
+            self.current_tool["output"] = output
+            self.current_tool["status"] = "success"
+            self.tool_calls.append(self.current_tool)
+            self.current_tool = None
+    
+    def on_tool_error(self, error: Exception, **kwargs):
+        """Called when a tool raises an error."""
+        if self.current_tool:
+            self.current_tool["output"] = str(error)
+            self.current_tool["status"] = "error"
+            self.tool_calls.append(self.current_tool)
+            self.current_tool = None
 
 # --- AGENT SETUP ---
 
@@ -75,7 +110,7 @@ Thought: {agent_scratchpad}""")
         prompt=prompt,
     )
     
-    # Create executor
+    # Create executor with callback handler
     agent_executor = AgentExecutor(
         agent=agent,
         tools=available_tools,
@@ -94,9 +129,9 @@ def get_response(
     user_input: str, 
     language_code: str = "en",
     chat_history: List[Dict[str, str]] = None
-) -> str:
+) -> tuple:
     """
-    Invokes the agent with the user's query.
+    Invokes the agent with the user's query and returns both response and tool info.
     
     Args:
         agent_executor: The initialized agent executor.
@@ -105,7 +140,7 @@ def get_response(
         chat_history: The conversation history from frontend (optional).
         
     Returns:
-        The AI's response as a string.
+        Tuple of (response_text, tool_calls_list)
     """
 
     # Initialize defaults
@@ -128,16 +163,25 @@ def get_response(
         else:
             final_input = user_input
         
-        # Invoke agent - use invoke() instead of run()
-        response = agent_executor.invoke({"input": final_input})
+        # Create callback handler to track tool calls
+        callback_handler = ToolCallbackHandler()
+        
+        # Invoke agent with callback handler - it will handle tool calling automatically
+        response = agent_executor.invoke(
+            {"input": final_input},
+            callbacks=[callback_handler]
+        )
         
         # Extract response - AgentExecutor returns dict with 'output' key
         output = response.get('output', 'Unable to process request')
         
         # Translate if necessary
         final_response = language_service.translate_to(output, language_code)
-        return final_response
+        
+        # Return both response and tool calls for frontend
+        return final_response, callback_handler.tool_calls
         
     except Exception as e:
         logger.error(f"Error in agent execution: {str(e)}")
-        return language_service.translate_to("I encountered an error processing your request. Please try again.", language_code)
+        error_msg = language_service.translate_to("I encountered an error processing your request. Please try again.", language_code)
+        return error_msg, []
