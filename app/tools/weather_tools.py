@@ -125,16 +125,44 @@ def get_weather_forecast(location: str) -> str:
     if not daily_forecasts:
         return f"I'm sorry, I couldn't get weather data for {location_display}. Please try with a different location."
 
-    summary = f"Here is the 5-day weather forecast for {location_display}:\n"
-    for date, data in list(daily_forecasts.items())[:5]:
+    # Format forecast in farmer-friendly way
+    day_names = ['Today', 'Tomorrow', 'Day 3', 'Day 4', 'Day 5']
+    summary = f"🌾 **Weather Forecast**\n\nHere's what to expect in your area:\n\n"
+    
+    for idx, (date, data) in enumerate(list(daily_forecasts.items())[:5]):
         if not data['temps'] or not data['conditions']:
             continue
-        min_temp, max_temp = min(data['temps']), max(data['temps'])
+        
+        min_temp = min(data['temps'])
+        max_temp = max(data['temps'])
         most_common_condition = max(set(data['conditions']), key=data['conditions'].count)
-        day_str = f"- {date}: Min Temp: {min_temp:.1f}C, Max Temp: {max_temp:.1f}C. General condition: {most_common_condition}."
+        
+        # Simplify condition names for farmers
+        condition = most_common_condition.lower()
+        if 'rain' in condition or 'drizzle' in condition:
+            condition_emoji = "🌧️"
+            condition_text = "Rainy"
+        elif 'cloud' in condition:
+            condition_emoji = "☁️"
+            condition_text = "Cloudy"
+        elif 'clear' in condition or 'sunny' in condition:
+            condition_emoji = "☀️"
+            condition_text = "Clear & Sunny"
+        else:
+            condition_emoji = "🌤️"
+            condition_text = most_common_condition.capitalize()
+        
+        # Format with better readability
+        day_name = day_names[idx] if idx < len(day_names) else f"Day {idx+1}"
+        summary += f"{condition_emoji} **{day_name}** ({date})\n"
+        summary += f"   Temperature: {min_temp:.0f}°C to {max_temp:.0f}°C\n"
+        summary += f"   Condition: {condition_text}\n"
+        
         if data['rain_chance']:
-            day_str += " There is a chance of rain."
-        summary += day_str + "\n"
+            summary += f"   ⚠️ Rain expected - Plan irrigation accordingly\n"
+        else:
+            summary += f"   ✓ No rain expected\n"
+        summary += "\n"
     
     return summary.strip()
 
