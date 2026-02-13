@@ -174,3 +174,10 @@ timeout
 timeout
   Extra inputs are not permitted [type=extra_forbidden, input_value=60, input_type=int]
     For further information visit https://errors.pydantic.dev/2.11/v/extra_forbidden
+2026-02-14 03:31:43,281 - INFO - Pre-warming knowledge base...
+2026-02-14 03:31:43,761 - INFO - Initializing Pinecone vector store...
+2026-02-14 03:31:45,815 - INFO - Loading HuggingFace embeddings...
+2026-02-14 03:31:45,816 - ERROR - Pinecone init failed: 1 validation error for HuggingFaceEndpointEmbeddings
+timeout
+  Extra inputs are not permitted [type=extra_forbidden, input_value=60, input_type=int]
+    For further information visit https://errors.pydantic.dev/2.11/v/extra_forbidden

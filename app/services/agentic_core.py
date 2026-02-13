@@ -129,7 +129,8 @@ def get_response(
     agent_executor, 
     user_input: str, 
     language_code: str = "en",
-    chat_history: List[Dict[str, str]] = None
+    chat_history: List[Dict[str, str]] = None,
+    location: str = None
 ) -> tuple:
     """
     Invokes the agent with the user's query and returns both response and tool info.
@@ -158,11 +159,15 @@ def get_response(
         context_summary = context_service.get_context_for_ai(chat_history)
     
     try:
-        # Prepare input with context if available
+        # Prepare input with context and location if available
         if context_summary:
             final_input = f"Context: {context_summary}\n\nQuestion: {user_input}"
         else:
             final_input = user_input
+        
+        # Add location information if provided
+        if location:
+            final_input = f"User Location: {location}\n\n{final_input}"
         
         # Create callback handler to track tool calls
         callback_handler = ToolCallbackHandler()

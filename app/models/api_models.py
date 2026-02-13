@@ -13,6 +13,7 @@ class ChatRequest(BaseModel):
     session_id: Optional[str] = None  # To track conversation sessions
     language: Optional[str] = "en"  # ISO 639-1 language code
     stream: Optional[bool] = False  # Whether to return streaming response
+    location: Optional[str] = None  # GPS coordinates as "lat,lon" or city name
 
 
 class ToolCall(BaseModel):

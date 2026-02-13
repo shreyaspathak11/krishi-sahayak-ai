@@ -36,58 +36,79 @@ def _get_weather_manager():
 @tool
 def get_weather_forecast(location: str) -> str:
     """
-    Gets a detailed 5-day weather forecast for a specified location name.
+    Gets a detailed 5-day weather forecast for a location (city name or GPS coordinates).
     This is the primary tool for all weather-related queries.
 
     Args:
-        location (str): The city or district name, e.g., "Hisar", "Ludhiana", "Pune".
+        location (str): Either a city name (e.g., "Hisar", "Ludhiana", "Pune") 
+                       or GPS coordinates as "latitude,longitude" (e.g., "23.49,87.33")
     """
     mgr = _get_weather_manager()
     if not mgr:
         return "Weather service is currently unavailable. Please try again later."
     
     print(f"--- Calling Weather Tool for Location: {location} ---")
+    
+    # Check if location is coordinates (contains comma with numbers)
+    location_display = location
     try:
-        forecast = mgr.forecast_at_place(location, '3h').forecast
-        daily_forecasts = {}
+        if ',' in location:
+            parts = location.split(',')
+            if len(parts) == 2:
+                lat, lon = float(parts[0].strip()), float(parts[1].strip())
+                # Use coordinates to get forecast
+                forecast = mgr.forecast_at_coords(lat, lon, '3h').forecast
+                location_display = f"coordinates ({lat}, {lon})"
+            else:
+                # Not valid coordinates, treat as city name
+                forecast = mgr.forecast_at_place(location, '3h').forecast
+        else:
+            # Treat as city name
+            forecast = mgr.forecast_at_place(location, '3h').forecast
+    except Exception as e:
+        if _NotFoundError and isinstance(e, _NotFoundError):
+            return f"I'm sorry, I could not find the location '{location}'. Please provide a valid city name or GPS coordinates."
+        return f"Error fetching weather for {location}: {e}"
+    
+    daily_forecasts = {}
 
-        for weather in forecast.weathers:
-            try:
-                date_str = datetime.fromtimestamp(weather.reference_time()).strftime('%Y-%m-%d')
-                if date_str not in daily_forecasts:
-                    daily_forecasts[date_str] = {'temps': [], 'conditions': [], 'rain_chance': False}
+    for weather in forecast.weathers:
+        try:
+            date_str = datetime.fromtimestamp(weather.reference_time()).strftime('%Y-%m-%d')
+            if date_str not in daily_forecasts:
+                daily_forecasts[date_str] = {'temps': [], 'conditions': [], 'rain_chance': False}
+            
+            # Safely get temperature
+            temp_data = weather.temperature('celsius')
+            if isinstance(temp_data, dict) and 'temp' in temp_data:
+                daily_forecasts[date_str]['temps'].append(temp_data['temp'])
+            
+            # Safely get weather status
+            if hasattr(weather, 'detailed_status') and weather.detailed_status:
+                daily_forecasts[date_str]['conditions'].append(weather.detailed_status)
                 
-                # Safely get temperature
-                temp_data = weather.temperature('celsius')
-                if isinstance(temp_data, dict) and 'temp' in temp_data:
-                    daily_forecasts[date_str]['temps'].append(temp_data['temp'])
-                
-                # Safely get weather status
-                if hasattr(weather, 'detailed_status') and weather.detailed_status:
-                    daily_forecasts[date_str]['conditions'].append(weather.detailed_status)
+                # Check for rain in the weather status
+                status = weather.detailed_status.lower()
+                if 'rain' in status or 'drizzle' in status or 'shower' in status:
+                    daily_forecasts[date_str]['rain_chance'] = True
                     
-                    # Check for rain in the weather status
-                    status = weather.detailed_status.lower()
-                    if 'rain' in status or 'drizzle' in status or 'shower' in status:
-                        daily_forecasts[date_str]['rain_chance'] = True
-                        
-            except Exception as e:
-                print(f"Error processing weather data point: {e}")
-                continue  # Skip this weather point and continue
+        except Exception as e:
+            print(f"Error processing weather data point: {e}")
+            continue
 
-        # Check if we have any valid data
-        if not daily_forecasts:
-            return f"I'm sorry, I couldn't get weather data for {location}. Please try with a different city name."
+    # Check if we have any valid data
+    if not daily_forecasts:
+        return f"I'm sorry, I couldn't get weather data for {location_display}. Please try with a different location."
 
-        summary = f"Here is the 5-day weather forecast for {location}:\n"
-        for date, data in list(daily_forecasts.items())[:5]:
-            if not data['temps'] or not data['conditions']:
-                continue
-            min_temp, max_temp = min(data['temps']), max(data['temps'])
-            most_common_condition = max(set(data['conditions']), key=data['conditions'].count)
-            day_str = f"- {date}: Min Temp: {min_temp:.1f}C, Max Temp: {max_temp:.1f}C. General condition: {most_common_condition}."
-            if data['rain_chance']:
-                day_str += " There is a chance of rain."
+    summary = f"Here is the 5-day weather forecast for {location_display}:\n"
+    for date, data in list(daily_forecasts.items())[:5]:
+        if not data['temps'] or not data['conditions']:
+            continue
+        min_temp, max_temp = min(data['temps']), max(data['temps'])
+        most_common_condition = max(set(data['conditions']), key=data['conditions'].count)
+        day_str = f"- {date}: Min Temp: {min_temp:.1f}C, Max Temp: {max_temp:.1f}C. General condition: {most_common_condition}."
+        if data['rain_chance']:
+            day_str += " There is a chance of rain."
             summary += day_str + "\n"
         
         return summary.strip()

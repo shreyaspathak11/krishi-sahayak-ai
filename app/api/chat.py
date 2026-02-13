@@ -55,7 +55,8 @@ async def chat(request: ChatRequest):
             krishi_agent, 
             request.message,
             language_code=request.language,
-            chat_history=request.chat_history
+            chat_history=request.chat_history,
+            location=request.location
         )
         
         # Build response with tool information
@@ -104,7 +105,8 @@ async def generate_chat_stream(request: ChatRequest) -> AsyncGenerator[str, None
             krishi_agent, 
             request.message,
             language_code=request.language,
-            chat_history=request.chat_history
+            chat_history=request.chat_history,
+            location=request.location
         )
         
         # Stream the response word by word
